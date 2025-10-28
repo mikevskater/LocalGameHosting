@@ -1,0 +1,25 @@
+{
+  "server": {
+    "port": 3000,
+    "host": "0.0.0.0"
+  },
+  "admin": {
+    "username": "admin",
+    "password": "changeme123"
+  },
+  "security": {
+    "jwtSecret": "CHANGE_THIS_TO_RANDOM_STRING",
+    "sessionExpiryDays": 30
+  },
+  "game": {
+    "activeGame": "example-static",
+    "gamesDirectory": "./games"
+  },
+  "database": {
+    "path": "./data/gamehost.db"
+  },
+  "uploads": {
+    "profilePictures": "./uploads/profile-pictures",
+    "maxFileSize": 5242880
+  }
+}
