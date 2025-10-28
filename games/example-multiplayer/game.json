@@ -1,0 +1,7 @@
+{
+  "id": "example-multiplayer",
+  "name": "Multiplayer Drawing Game",
+  "description": "A real-time multiplayer drawing canvas that demonstrates Socket.IO features",
+  "version": "1.0.0",
+  "type": "multiplayer"
+}
