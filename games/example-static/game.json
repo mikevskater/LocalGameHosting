@@ -1,0 +1,7 @@
+{
+  "id": "example-static",
+  "name": "Number Guessing Game",
+  "description": "A simple number guessing game that demonstrates the stats API",
+  "version": "1.0.0",
+  "type": "static"
+}
