@@ -152,18 +152,25 @@ app.get('/', (req, res) => {
 const PORT = config.get('server.port') || 3000;
 const HOST = config.get('server.host') || '0.0.0.0';
 
-server.listen(PORT, HOST, () => {
-  console.log('='.repeat(50));
-  console.log('Local Game Hosting Service');
-  console.log('='.repeat(50));
-  console.log(`Server running on http://${HOST}:${PORT}`);
-  console.log(`Active game: ${config.get('game.activeGame')}`);
-  console.log(`Admin panel: http://${HOST}:${PORT}/admin.html`);
-  console.log('='.repeat(50));
+// Wait a bit for database to initialize, then start server
+setTimeout(() => {
+  server.listen(PORT, HOST, () => {
+    console.log('='.repeat(50));
+    console.log('Local Game Hosting Service');
+    console.log('='.repeat(50));
+    console.log(`Server running on http://${HOST}:${PORT}`);
+    console.log(`Active game: ${config.get('game.activeGame')}`);
+    console.log(`Admin panel: http://${HOST}:${PORT}/admin.html`);
+    console.log('='.repeat(50));
 
-  // Clean expired sessions on startup
-  db.cleanExpiredSessions();
-});
+    // Clean expired sessions on startup
+    try {
+      db.cleanExpiredSessions();
+    } catch (error) {
+      console.error('Error cleaning sessions:', error.message);
+    }
+  });
+}, 1000);
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
