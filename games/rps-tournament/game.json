@@ -1,0 +1,18 @@
+{
+  "id": "rps-tournament",
+  "name": "Rock Paper Scissors Tournament",
+  "description": "Competitive multiplayer RPS tournament with bracket elimination, real-time matches, and comprehensive statistics tracking",
+  "version": "1.0.0",
+  "type": "multiplayer",
+  "minPlayers": 2,
+  "maxPlayers": 16,
+  "supportsSpectators": true,
+  "features": [
+    "Single Elimination Bracket",
+    "Best of 3/5/7 Match Formats",
+    "Real-time Simultaneous Selection",
+    "Spectator Mode",
+    "Tournament Statistics",
+    "Champion Crowning"
+  ]
+}

@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rock Paper Scissors Tournament</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      overflow-x: hidden;
+    }
+
+    #game-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .game-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .game-header h1 {
+      font-size: 2.5rem;
+      margin: 0 0 10px 0;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .game-header .subtitle {
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+
+    /* Screens */
+    .screen {
+      display: none;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    /* Lobby Screen */
+    .lobby-container {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      padding: 30px;
+      backdrop-filter: blur(10px);
+    }
+
+    .settings-panel {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+
+    .settings-panel h3 {
+      margin-top: 0;
+      margin-bottom: 15px;
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+
+    .setting-row label {
+      font-weight: 500;
+    }
+
+    .setting-row select,
+    .setting-row input[type="checkbox"] {
+      padding: 8px 12px;
+      border-radius: 5px;
+      border: none;
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .setting-row select option {
+      background: #667eea;
+      color: white;
+    }
+
+    .players-list {
+      margin-bottom: 30px;
+    }
+
+    .players-list h3 {
+      margin-bottom: 15px;
+    }
+
+    .player-item {
+      background: rgba(0, 0, 0, 0.2);
+      padding: 15px 20px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .player-item .player-name {
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    .player-item .player-status {
+      font-size: 0.9rem;
+      padding: 5px 15px;
+      border-radius: 20px;
+    }
+
+    .player-status.ready {
+      background: rgba(46, 213, 115, 0.3);
+      border: 2px solid #2ed573;
+    }
+
+    .player-status.waiting {
+      background: rgba(255, 159, 64, 0.3);
+      border: 2px solid #ff9f40;
+    }
+
+    .player-status.host {
+      background: rgba(255, 215, 0, 0.3);
+      border: 2px solid #ffd700;
+      margin-left: 10px;
+    }
+
+    .lobby-actions {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+    }
+
+    .btn {
+      padding: 15px 40px;
+      font-size: 1.2rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #2ed573 0%, #27ae60 100%);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(46, 213, 115, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+      color: white;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+    }
+
+    /* Bracket Screen */
+    .bracket-container {
+      padding: 20px;
+    }
+
+    .bracket-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .bracket-header h2 {
+      font-size: 2rem;
+      margin: 0 0 10px 0;
+    }
+
+    .bracket-visual {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      overflow-x: auto;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+
+    .bracket-round {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      min-width: 200px;
+    }
+
+    .bracket-round-title {
+      text-align: center;
+      font-weight: 600;
+      margin-bottom: 15px;
+      font-size: 1.1rem;
+    }
+
+    .bracket-match {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 15px;
+      margin: 10px 0;
+      position: relative;
+    }
+
+    .bracket-match.active {
+      border: 2px solid #ffd700;
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+    }
+
+    .bracket-player {
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 5px;
+      background: rgba(0, 0, 0, 0.3);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .bracket-player.winner {
+      background: rgba(46, 213, 115, 0.3);
+      border: 2px solid #2ed573;
+    }
+
+    .bracket-player.loser {
+      opacity: 0.5;
+    }
+
+    .bracket-player .seed {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      margin-right: 10px;
+    }
+
+    .active-matches {
+      margin-top: 30px;
+    }
+
+    .active-matches h3 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    /* Match Screen */
+    .match-container {
+      max-width: 900px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .match-header {
+      margin-bottom: 30px;
+    }
+
+    .match-header h2 {
+      font-size: 2rem;
+      margin: 0 0 10px 0;
+    }
+
+    .match-info {
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+
+    .match-players {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+      gap: 30px;
+    }
+
+    .match-player {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      padding: 30px 20px;
+      backdrop-filter: blur(10px);
+    }
+
+    .match-player.current-user {
+      border: 3px solid #ffd700;
+      box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+    }
+
+    .match-player .player-name {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 15px;
+    }
+
+    .match-player .player-score {
+      font-size: 3rem;
+      font-weight: 900;
+      margin: 10px 0;
+    }
+
+    .match-player .player-status {
+      font-size: 1rem;
+      opacity: 0.8;
+      margin-top: 10px;
+    }
+
+    .vs-divider {
+      font-size: 3rem;
+      font-weight: 900;
+      opacity: 0.7;
+    }
+
+    .match-game-info {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 1.2rem;
+    }
+
+    .countdown {
+      font-size: 5rem;
+      font-weight: 900;
+      margin: 40px 0;
+      text-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    .choices {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin: 40px 0;
+    }
+
+    .choice-btn {
+      width: 150px;
+      height: 150px;
+      font-size: 4rem;
+      background: rgba(255, 255, 255, 0.1);
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .choice-btn:hover:not(:disabled) {
+      transform: scale(1.15);
+      background: rgba(255, 255, 255, 0.2);
+      border-color: white;
+    }
+
+    .choice-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .choice-btn.selected {
+      border-color: #2ed573;
+      background: rgba(46, 213, 115, 0.3);
+      box-shadow: 0 0 30px rgba(46, 213, 115, 0.5);
+    }
+
+    .reveal-container {
+      margin: 40px 0;
+    }
+
+    .reveal-choices {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 50px;
+      margin: 30px 0;
+    }
+
+    .reveal-choice {
+      text-align: center;
+    }
+
+    .reveal-choice .choice-icon {
+      font-size: 6rem;
+      margin-bottom: 15px;
+    }
+
+    .reveal-choice .choice-label {
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    .reveal-result {
+      font-size: 2.5rem;
+      font-weight: 900;
+      margin: 30px 0;
+      text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+    }
+
+    .reveal-result.win {
+      color: #2ed573;
+    }
+
+    .reveal-result.lose {
+      color: #ff6b6b;
+    }
+
+    .reveal-result.tie {
+      color: #ffd700;
+    }
+
+    .match-history {
+      margin-top: 40px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    .match-history h4 {
+      margin-top: 0;
+    }
+
+    .history-round {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      margin: 5px 0;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 5px;
+    }
+
+    /* Results Screen */
+    .results-container {
+      text-align: center;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .champion-announcement {
+      margin: 40px 0;
+    }
+
+    .champion-trophy {
+      font-size: 8rem;
+      margin-bottom: 20px;
+      animation: trophy-bounce 2s infinite;
+    }
+
+    @keyframes trophy-bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-20px); }
+    }
+
+    .champion-name {
+      font-size: 3rem;
+      font-weight: 900;
+      margin: 20px 0;
+      text-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
+    }
+
+    .champion-title {
+      font-size: 1.5rem;
+      margin-bottom: 40px;
+      opacity: 0.9;
+    }
+
+    .placements {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      padding: 30px;
+      margin: 30px 0;
+    }
+
+    .placements h3 {
+      margin-top: 0;
+      margin-bottom: 20px;
+    }
+
+    .placement-item {
+      display: flex;
+      align-items: center;
+      padding: 15px 20px;
+      margin: 10px 0;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+    }
+
+    .placement-item .placement-rank {
+      font-size: 1.8rem;
+      font-weight: 900;
+      width: 60px;
+      text-align: center;
+    }
+
+    .placement-item.first {
+      border: 3px solid #ffd700;
+      background: rgba(255, 215, 0, 0.2);
+    }
+
+    .placement-item.second {
+      border: 3px solid #c0c0c0;
+      background: rgba(192, 192, 192, 0.2);
+    }
+
+    .placement-item.third {
+      border: 3px solid #cd7f32;
+      background: rgba(205, 127, 50, 0.2);
+    }
+
+    .placement-item .placement-name {
+      font-size: 1.5rem;
+      font-weight: 600;
+      flex: 1;
+      text-align: left;
+    }
+
+    .results-actions {
+      margin-top: 40px;
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+    }
+
+    /* Spectator View */
+    .spectator-banner {
+      background: rgba(255, 159, 64, 0.3);
+      border: 2px solid #ff9f40;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+      text-align: center;
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+
+    /* Utility */
+    .text-center {
+      text-align: center;
+    }
+
+    .mt-20 {
+      margin-top: 20px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .game-header h1 {
+        font-size: 2rem;
+      }
+
+      .bracket-visual {
+        flex-direction: column;
+      }
+
+      .match-players {
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .choices {
+        gap: 15px;
+      }
+
+      .choice-btn {
+        width: 100px;
+        height: 100px;
+        font-size: 3rem;
+      }
+
+      .reveal-choices {
+        flex-direction: column;
+        gap: 30px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div class="game-header">
+      <h1>🪨📄✂️ Rock Paper Scissors Tournament</h1>
+      <p class="subtitle" id="user-info"></p>
+    </div>
+
+    <!-- Lobby Screen -->
+    <div id="lobby-screen" class="screen active">
+      <div class="lobby-container">
+        <div id="settings-panel" class="settings-panel">
+          <h3>⚙️ Tournament Settings <span id="host-badge" class="hidden" style="font-size: 0.9rem; color: #ffd700;">(You are Host)</span></h3>
+          <p id="host-info" style="margin-bottom: 15px; opacity: 0.8; font-size: 0.9rem;">Only the host can change settings</p>
+          <div class="setting-row">
+            <label>Match Format:</label>
+            <select id="format-select" disabled>
+              <option value="bo3">Best of 3</option>
+              <option value="bo5">Best of 5</option>
+              <option value="bo7">Best of 7</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <label>Seeding:</label>
+            <select id="seeding-select" disabled>
+              <option value="random">Random</option>
+              <option value="order">Join Order</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <label>Auto-start when all ready:</label>
+            <input type="checkbox" id="autostart-checkbox" disabled>
+          </div>
+        </div>
+
+        <div class="players-list">
+          <h3>👥 Players (<span id="player-count">0</span>)</h3>
+          <div id="players-container"></div>
+        </div>
+
+        <div class="lobby-actions">
+          <button id="ready-btn" class="btn btn-primary" onclick="toggleReady()">Ready Up!</button>
+          <button id="start-btn" class="btn btn-secondary hidden" onclick="startTournament()">Start Tournament</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bracket Screen -->
+    <div id="bracket-screen" class="screen">
+      <div class="bracket-container">
+        <div class="bracket-header">
+          <h2>🏆 Tournament Bracket</h2>
+          <p id="bracket-round-info">Round 1</p>
+        </div>
+
+        <div id="bracket-visual" class="bracket-visual"></div>
+
+        <div id="active-matches" class="active-matches hidden">
+          <h3>⚔️ Active Matches</h3>
+          <div id="active-matches-container"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Match Screen -->
+    <div id="match-screen" class="screen">
+      <div class="match-container">
+        <div id="spectator-banner" class="spectator-banner hidden">
+          👀 You are spectating this match
+        </div>
+
+        <div class="match-header">
+          <h2 id="match-title">Match 1</h2>
+          <p class="match-info" id="match-format">Best of 3 - First to 2</p>
+        </div>
+
+        <div class="match-players" id="match-players">
+          <div class="match-player" id="player1-info">
+            <div class="player-name" id="p1-name">Player 1</div>
+            <div class="player-score" id="p1-score">0</div>
+            <div class="player-status" id="p1-status">Waiting...</div>
+          </div>
+
+          <div class="vs-divider">VS</div>
+
+          <div class="match-player" id="player2-info">
+            <div class="player-name" id="p2-name">Player 2</div>
+            <div class="player-score" id="p2-score">0</div>
+            <div class="player-status" id="p2-status">Waiting...</div>
+          </div>
+        </div>
+
+        <div class="match-game-info">
+          Game <span id="current-game">1</span> of <span id="max-games">3</span>
+        </div>
+
+        <div id="countdown-container" class="hidden">
+          <div class="countdown" id="countdown">3</div>
+        </div>
+
+        <div id="choices-container" class="hidden">
+          <div class="choices">
+            <button class="choice-btn" onclick="makeChoice('rock')" data-choice="rock">🪨</button>
+            <button class="choice-btn" onclick="makeChoice('paper')" data-choice="paper">📄</button>
+            <button class="choice-btn" onclick="makeChoice('scissors')" data-choice="scissors">✂️</button>
+          </div>
+        </div>
+
+        <div id="reveal-container" class="reveal-container hidden">
+          <div class="reveal-choices">
+            <div class="reveal-choice">
+              <div class="choice-icon" id="reveal-p1-choice">🪨</div>
+              <div class="choice-label" id="reveal-p1-name">Player 1</div>
+            </div>
+            <div class="reveal-choice">
+              <div class="choice-icon" id="reveal-p2-choice">📄</div>
+              <div class="choice-label" id="reveal-p2-name">Player 2</div>
+            </div>
+          </div>
+          <div class="reveal-result" id="reveal-result">Player 1 Wins!</div>
+        </div>
+
+        <div class="match-history">
+          <h4>Match History</h4>
+          <div id="match-history-container">
+            <p style="opacity: 0.6;">No rounds played yet</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Screen -->
+    <div id="results-screen" class="screen">
+      <div class="results-container">
+        <div class="champion-announcement">
+          <div class="champion-trophy">🏆</div>
+          <div class="champion-title">CHAMPION</div>
+          <div class="champion-name" id="champion-name">Winner</div>
+        </div>
+
+        <div class="placements">
+          <h3>📊 Final Standings</h3>
+          <div id="placements-container"></div>
+        </div>
+
+        <div class="results-actions">
+          <button class="btn btn-primary" onclick="newTournament()">🔄 New Tournament</button>
+          <button class="btn btn-secondary" onclick="viewBracket()">👁️ View Bracket</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/game/rps-game.js"></script>
+</body>
+</html>
