@@ -1,0 +1,10 @@
+{
+  "id": "tictactoe",
+  "name": "Tic-Tac-Toe Rooms",
+  "description": "Multiplayer Tic-Tac-Toe with custom board sizes and room system",
+  "version": "1.0.0",
+  "type": "multiplayer",
+  "minPlayers": 2,
+  "maxPlayers": 2,
+  "supportsSpectators": true
+}
