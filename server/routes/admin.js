@@ -164,6 +164,35 @@ router.post('/games/switch', auth.adminAuthMiddleware, (req, res) => {
   res.json({ message: `Switched to game: ${gameId}` });
 });
 
+// Start vote (admin only) - triggers democracy-vote game module
+router.post('/start-vote', auth.adminAuthMiddleware, (req, res) => {
+  const activeGame = config.get('game.activeGame');
+
+  // Check if democracy-vote is the active game
+  if (activeGame !== 'democracy-vote') {
+    return res.status(400).json({
+      error: 'Democracy vote game must be active. Switch to "Vote for Next Game" first.'
+    });
+  }
+
+  // Get the current game module and call startVote
+  const currentModule = gameLoader.getCurrentModule();
+
+  if (!currentModule || !currentModule.startVote) {
+    return res.status(500).json({
+      error: 'Vote system not available. Make sure democracy-vote game is loaded.'
+    });
+  }
+
+  try {
+    currentModule.startVote(io);
+    res.json({ message: 'Vote started successfully' });
+  } catch (error) {
+    console.error('Error starting vote:', error);
+    res.status(500).json({ error: 'Failed to start vote: ' + error.message });
+  }
+});
+
 // Get server stats (admin only)
 router.get('/stats', auth.adminAuthMiddleware, (req, res) => {
   const users = db.getAllUsers();

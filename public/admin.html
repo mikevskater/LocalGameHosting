@@ -248,6 +248,16 @@
         <div id="voting-error" class="error-message hidden"></div>
         <div id="voting-success" class="success-message hidden"></div>
 
+        <div id="vote-controls" style="margin-bottom: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+          <h3 style="margin-top: 0; margin-bottom: 15px;">Vote Control</h3>
+          <p style="color: #666; margin-bottom: 15px;">
+            <strong>Note:</strong> First switch the active game to "Vote for Next Game" above, then start the vote here.
+          </p>
+          <button class="btn btn-primary" onclick="startVote()" style="font-size: 1.1rem; padding: 12px 24px;">
+            🗳️ Start Vote Round
+          </button>
+        </div>
+
         <div class="config-group">
           <label>Vote Time (seconds)</label>
           <input type="number" id="vote-time" min="10" max="600" />

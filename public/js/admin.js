@@ -440,3 +440,24 @@ async function saveVotingSettings() {
     showError('voting-error', result.error);
   }
 }
+
+async function startVote() {
+  try {
+    const response = await fetch('/api/admin/start-vote', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${adminAPI.token}`
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to start vote');
+    }
+
+    showSuccess('voting-success', 'Vote started successfully!');
+  } catch (error) {
+    showError('voting-error', error.message);
+  }
+}

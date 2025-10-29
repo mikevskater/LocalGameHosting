@@ -81,6 +81,11 @@ class GameLoader {
   hasServerModule() {
     return this.activeGameModule !== null;
   }
+
+  // Get current game module (for admin to trigger special functions)
+  getCurrentModule() {
+    return this.activeGameModule;
+  }
 }
 
 module.exports = new GameLoader();
