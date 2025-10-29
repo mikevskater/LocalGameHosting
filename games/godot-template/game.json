@@ -1,0 +1,8 @@
+{
+  "id": "godot-template",
+  "name": "Godot Game Template",
+  "description": "Template for integrating Godot games with the server",
+  "version": "1.0.0",
+  "type": "godot",
+  "engine": "godot"
+}

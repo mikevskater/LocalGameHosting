@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Godot Game</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #1a1a1a;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    #game-container {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    #loading {
+      color: white;
+      font-size: 24px;
+      text-align: center;
+    }
+
+    #loading-progress {
+      width: 300px;
+      height: 30px;
+      background: #333;
+      border-radius: 15px;
+      margin-top: 20px;
+      overflow: hidden;
+    }
+
+    #loading-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    #canvas {
+      display: none;
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+    }
+
+    #canvas.loaded {
+      display: block;
+    }
+
+    #error {
+      display: none;
+      color: #ff6b6b;
+      text-align: center;
+      padding: 20px;
+    }
+
+    #error.show {
+      display: block;
+    }
+
+    .status-indicator {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      z-index: 1000;
+    }
+
+    .status-indicator.connected {
+      border-left: 4px solid #2ecc71;
+    }
+
+    .status-indicator.disconnected {
+      border-left: 4px solid #e74c3c;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div class="status-indicator disconnected" id="status">
+      Connecting...
+    </div>
+
+    <div id="loading">
+      <div>Loading Godot Game...</div>
+      <div id="loading-progress">
+        <div id="loading-bar"></div>
+      </div>
+    </div>
+
+    <div id="error">
+      <h2>Failed to Load Game</h2>
+      <p id="error-message"></p>
+      <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; cursor: pointer;">
+        Retry
+      </button>
+    </div>
+
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <!-- Godot engine will be loaded here -->
+  <script src="/game/game.js"></script>
+
+  <script>
+    // Global variables
+    window.godotInstance = null;
+    window._godotEventQueue = [];
+    window.godotReady = false;
+
+    // Check authentication
+    if (!gameAPI || !gameAPI.isAuthenticated()) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('error').classList.add('show');
+      document.getElementById('error-message').textContent = 'You must be logged in to play. Redirecting...';
+      setTimeout(() => window.location.href = '/', 2000);
+    } else {
+      initializeGame();
+    }
+
+    async function initializeGame() {
+      const currentUser = await getCurrentUser();
+
+      // Set up GameAPI bridge for Godot
+      window.GodotServerBridge = {
+        // Godot calls this to send events to server
+        emit: function(event, dataJson) {
+          try {
+            const data = typeof dataJson === 'string' ? JSON.parse(dataJson) : dataJson;
+            gameAPI.emit(event, data);
+            console.log('[Godot→Server]', event, data);
+          } catch (e) {
+            console.error('Failed to emit event:', e);
+          }
+        },
+
+        // Get current user info
+        getUser: function() {
+          return JSON.stringify(currentUser);
+        },
+
+        // Get user profile (for colors, etc)
+        getUserProfile: function() {
+          return JSON.stringify({
+            id: currentUser.id,
+            username: currentUser.username,
+            nickname: currentUser.nickname,
+            nameColor: currentUser.nameColor,
+            playerColor: currentUser.playerColor
+          });
+        },
+
+        // Check if connected
+        isConnected: function() {
+          return gameAPI.socket && gameAPI.socket.connected;
+        }
+      };
+
+      // Listen for all game events from server
+      gameAPI.on('player-moved', queueEventForGodot);
+      gameAPI.on('player-action', queueEventForGodot);
+      gameAPI.on('game-state', queueEventForGodot);
+
+      // Generic event listener
+      function queueEventForGodot(data, user) {
+        window._godotEventQueue.push({
+          event: arguments.callee.name.replace('bound ', ''),
+          data: data,
+          user: user
+        });
+      }
+
+      // Update connection status
+      gameAPI.socket.on('connect', () => {
+        document.getElementById('status').className = 'status-indicator connected';
+        document.getElementById('status').textContent = 'Connected';
+      });
+
+      gameAPI.socket.on('disconnect', () => {
+        document.getElementById('status').className = 'status-indicator disconnected';
+        document.getElementById('status').textContent = 'Disconnected';
+      });
+
+      // Load Godot engine
+      loadGodotEngine();
+    }
+
+    async function getCurrentUser() {
+      const result = await gameAPI.getProfile();
+      if (result.success) {
+        return result.user;
+      }
+      return null;
+    }
+
+    function loadGodotEngine() {
+      const engine = new Engine();
+
+      // Show loading progress
+      engine.setProgressFunc((current, total) => {
+        const percent = Math.round((current / total) * 100);
+        document.getElementById('loading-bar').style.width = percent + '%';
+      });
+
+      // Initialize and start game
+      engine.init().then(() => {
+        return engine.startGame({
+          'executable': '/game/game',
+          'canvas': document.getElementById('canvas'),
+          'canvasResizePolicy': 2, // Adaptive size
+          'experimentalVK': false,
+          'focusCanvas': true,
+          'gdnativeLibs': []
+        });
+      }).then((instance) => {
+        // Game loaded successfully
+        window.godotInstance = instance;
+        window.godotReady = true;
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('canvas').classList.add('loaded');
+        document.getElementById('canvas').focus();
+
+        console.log('✓ Godot game loaded');
+        console.log('✓ Server bridge ready');
+        console.log('✓ GameAPI connected');
+      }).catch((err) => {
+        // Error loading game
+        console.error('Failed to load Godot game:', err);
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error').classList.add('show');
+        document.getElementById('error-message').textContent = err.message || 'Unknown error';
+      });
+    }
+  </script>
+</body>
+</html>
