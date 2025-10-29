@@ -156,6 +156,9 @@ function joinRoom(socket, io, user, roomId, asSpectator) {
     });
   } else {
     // Join as player
+    // Remove from spectators if they were spectating
+    room.spectators = room.spectators.filter(s => s.id !== user.id);
+
     // Check if user was previously a player (rejoin scenario)
     let playerIndex = room.players.findIndex(p => p && p.id === user.id);
 
@@ -164,7 +167,7 @@ function joinRoom(socket, io, user, roomId, asSpectator) {
       const emptySlot = room.players.findIndex(p => p === null);
 
       if (emptySlot !== -1) {
-        // Fill empty slot
+        // Fill empty slot (allowed even during active game)
         room.players[emptySlot] = user;
         playerIndex = emptySlot;
       } else {
@@ -239,10 +242,13 @@ function leaveRoom(socket, io, user, broadcast = true) {
     room.spectators = room.spectators.filter(s => s.id !== user.id);
   } else {
     // Remove from players - keep slot open for potential rejoin
-    const playerIndex = room.players.findIndex(p => p.id === user.id);
+    const playerIndex = room.players.findIndex(p => p && p.id === user.id);
     if (playerIndex !== -1) {
       room.players[playerIndex] = null; // Leave slot empty for rejoin
     }
+
+    // Also remove from spectators in case they were there
+    room.spectators = room.spectators.filter(s => s.id !== user.id);
 
     // If a player left during active game, notify others
     if (room.gameState === 'playing') {

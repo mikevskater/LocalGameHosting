@@ -463,6 +463,16 @@
             <div id="players-list"></div>
           </div>
 
+          <!-- Role Switch Buttons -->
+          <div id="role-switch-panel" style="margin: 15px 0; display: flex; gap: 10px; flex-direction: column;">
+            <button id="switch-to-spectator-btn" class="btn btn-secondary" onclick="switchToSpectator()" style="display: none; font-size: 0.85rem;">
+              Become Spectator
+            </button>
+            <button id="switch-to-player-btn" class="btn btn-secondary" onclick="switchToPlayer()" style="display: none; font-size: 0.85rem;">
+              Join as Player
+            </button>
+          </div>
+
           <!-- Spectators -->
           <div class="spectators-panel">
             <div class="panel-title">Spectators (<span id="spectator-count">0</span>)</div>

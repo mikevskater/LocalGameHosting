@@ -278,6 +278,8 @@ function renderPlayers() {
       </div>
     `;
   }).join('');
+
+  updateRoleSwitchButtons();
 }
 
 function renderSpectators() {
@@ -288,6 +290,7 @@ function renderSpectators() {
 
   if (currentRoom.spectators.length === 0) {
     container.innerHTML = '<div class="empty-message">No spectators</div>';
+    updateRoleSwitchButtons();
     return;
   }
 
@@ -299,6 +302,8 @@ function renderSpectators() {
       </div>
     `;
   }).join('');
+
+  updateRoleSwitchButtons();
 }
 
 function updateTurnIndicator() {
@@ -475,6 +480,55 @@ function startNewGame() {
   });
 
   hideNewGameModal();
+}
+
+function switchToSpectator() {
+  if (!currentRoom || playerRole !== 'player') return;
+
+  // Use the spectate-room event to switch to spectator
+  gameAPI.emit('spectate-room', { roomId: currentRoom.id });
+}
+
+function switchToPlayer() {
+  if (!currentRoom || playerRole !== 'spectator') return;
+
+  // Check if there's an empty slot
+  const hasEmptySlot = currentRoom.players.some(p => p === null);
+  const activePlayers = currentRoom.players.filter(p => p !== null);
+
+  if (!hasEmptySlot && activePlayers.length >= 2) {
+    alert('No player slots available');
+    return;
+  }
+
+  // Use the join-room event to switch to player
+  gameAPI.emit('join-room', { roomId: currentRoom.id });
+}
+
+function updateRoleSwitchButtons() {
+  const switchToSpectatorBtn = document.getElementById('switch-to-spectator-btn');
+  const switchToPlayerBtn = document.getElementById('switch-to-player-btn');
+
+  if (!currentRoom) {
+    switchToSpectatorBtn.style.display = 'none';
+    switchToPlayerBtn.style.display = 'none';
+    return;
+  }
+
+  // Show "Become Spectator" if user is a player
+  if (playerRole === 'player') {
+    switchToSpectatorBtn.style.display = 'block';
+    switchToPlayerBtn.style.display = 'none';
+  }
+  // Show "Join as Player" if user is spectator and there's room
+  else if (playerRole === 'spectator') {
+    const hasEmptySlot = currentRoom.players.some(p => p === null);
+    const activePlayers = currentRoom.players.filter(p => p !== null);
+    const canJoin = hasEmptySlot || activePlayers.length < 2;
+
+    switchToSpectatorBtn.style.display = 'none';
+    switchToPlayerBtn.style.display = canJoin ? 'block' : 'none';
+  }
 }
 
 function escapeHtml(text) {
