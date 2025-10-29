@@ -6,6 +6,7 @@ const cors = require('cors');
 const config = require('./config');
 const db = require('./database');
 const auth = require('./auth');
+const gameLoader = require('./gameLoader');
 
 // Import routes
 const userRoutes = require('./routes/user');
@@ -106,6 +107,9 @@ io.on('connection', (socket) => {
       socket.broadcast.emit('user-connected', socket.userProfile);
 
       console.log(`User authenticated: ${socket.username} (${socket.userId})`);
+
+      // Let game module handle connection
+      gameLoader.handleSocketConnection(socket, io, socket.userProfile);
     } else {
       socket.emit('authenticated', { success: false, error: 'Invalid token' });
     }
@@ -163,6 +167,9 @@ io.on('connection', (socket) => {
     if (socket.userId) {
       console.log(`User disconnected: ${socket.username} (${socket.userId})`);
       socket.broadcast.emit('user-disconnected', socket.userProfile);
+
+      // Let game module handle disconnection
+      gameLoader.handleSocketDisconnection(socket, io, socket.userProfile);
     }
     connectedUsers.delete(socket.id);
     console.log('Client disconnected:', socket.id);
@@ -200,6 +207,10 @@ setTimeout(() => {
     } catch (error) {
       console.error('Error cleaning sessions:', error.message);
     }
+
+    // Load active game module
+    const activeGame = config.get('game.activeGame');
+    gameLoader.loadGame(activeGame);
   });
 }, 1000);
 

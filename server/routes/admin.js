@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../database');
 const auth = require('../auth');
 const config = require('../config');
+const gameLoader = require('../gameLoader');
 const fs = require('fs');
 const path = require('path');
 
@@ -145,6 +146,10 @@ router.post('/games/switch', auth.adminAuthMiddleware, (req, res) => {
   }
 
   config.set('game.activeGame', gameId);
+
+  // Load the new game module
+  gameLoader.loadGame(gameId);
+
   res.json({ message: `Switched to game: ${gameId}` });
 });
 
