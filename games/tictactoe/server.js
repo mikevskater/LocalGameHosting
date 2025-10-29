@@ -62,6 +62,10 @@ function handleConnection(socket, io, user) {
         handleRematch(socket, io, user);
         break;
 
+      case 'new-game':
+        handleNewGame(socket, io, user, data);
+        break;
+
       case 'chat-message':
         handleChat(socket, io, user, data);
         break;
@@ -132,56 +136,82 @@ function joinRoom(socket, io, user, roomId, asSpectator) {
 
   if (asSpectator) {
     // Join as spectator
+    // Remove from spectators list if already there
+    room.spectators = room.spectators.filter(s => s.id !== user.id);
     room.spectators.push(user);
+
     socket.currentRoom = roomId;
     socket.isSpectator = true;
 
+    // Send chat history to new spectator
     socket.emit('game-event', {
       event: 'room-joined',
-      data: { room: sanitizeRoom(room), role: 'spectator' }
+      data: { room: sanitizeRoom(room), role: 'spectator', chatHistory: room.chatHistory }
     });
 
-    // Notify players
+    // Notify others
     broadcastToRoom(io, roomId, {
       event: 'spectator-joined',
       data: { user }
     });
   } else {
     // Join as player
-    if (room.players.length >= 2) {
-      socket.emit('game-event', {
-        event: 'error',
-        data: { message: 'Room is full' }
-      });
-      return;
-    }
+    // Check if user was previously a player (rejoin scenario)
+    let playerIndex = room.players.findIndex(p => p && p.id === user.id);
 
-    if (room.gameState !== 'waiting') {
-      socket.emit('game-event', {
-        event: 'error',
-        data: { message: 'Game already in progress' }
-      });
-      return;
-    }
+    if (playerIndex === -1) {
+      // Not rejoining, find empty slot or add new player
+      const emptySlot = room.players.findIndex(p => p === null);
 
-    room.players.push(user);
+      if (emptySlot !== -1) {
+        // Fill empty slot
+        room.players[emptySlot] = user;
+        playerIndex = emptySlot;
+      } else {
+        // Add new player
+        if (room.players.length >= 2) {
+          socket.emit('game-event', {
+            event: 'error',
+            data: { message: 'Room is full' }
+          });
+          return;
+        }
+
+        if (room.gameState !== 'waiting') {
+          socket.emit('game-event', {
+            event: 'error',
+            data: { message: 'Game already in progress' }
+          });
+          return;
+        }
+
+        room.players.push(user);
+        playerIndex = room.players.length - 1;
+      }
+    }
+    // else: playerIndex already set (rejoining)
+
     socket.currentRoom = roomId;
     socket.isSpectator = false;
 
+    // Send room state with chat history
     socket.emit('game-event', {
       event: 'room-joined',
-      data: { room: sanitizeRoom(room), role: 'player', playerIndex: room.players.length - 1 }
+      data: { room: sanitizeRoom(room), role: 'player', playerIndex, chatHistory: room.chatHistory }
     });
 
-    // Start game if 2 players
-    if (room.players.length === 2) {
+    // Count non-null players
+    const activePlayers = room.players.filter(p => p !== null);
+
+    // Start game if 2 players and in waiting state
+    if (activePlayers.length === 2 && room.gameState === 'waiting') {
       room.gameState = 'playing';
       broadcastToRoom(io, roomId, {
         event: 'game-started',
         data: { room: sanitizeRoom(room) }
       });
     } else {
-      // Notify waiting for opponent
+      // Notify player joined/rejoined
       broadcastToRoom(io, roomId, {
         event: 'player-joined',
         data: { user, room: sanitizeRoom(room) }
@@ -208,20 +238,32 @@ function leaveRoom(socket, io, user, broadcast = true) {
     // Remove from spectators
     room.spectators = room.spectators.filter(s => s.id !== user.id);
   } else {
-    // Remove from players
-    room.players = room.players.filter(p => p.id !== user.id);
+    // Remove from players - keep slot open for potential rejoin
+    const playerIndex = room.players.findIndex(p => p.id === user.id);
+    if (playerIndex !== -1) {
+      room.players[playerIndex] = null; // Leave slot empty for rejoin
+    }
 
-    // If a player left, end the game
+    // If a player left during active game, notify others
     if (room.gameState === 'playing') {
-      room.gameState = 'finished';
-      room.winner = room.players[0]?.id || null;
+      if (broadcast) {
+        broadcastToRoom(io, roomId, {
+          event: 'player-left',
+          data: {
+            userId: user.id,
+            room: sanitizeRoom(room)
+          }
+        });
+      }
+    } else if (room.gameState === 'waiting') {
+      // In waiting state, actually remove the player
+      room.players = room.players.filter(p => p !== null && p.id !== user.id);
 
       if (broadcast) {
         broadcastToRoom(io, roomId, {
-          event: 'game-ended',
+          event: 'player-left',
           data: {
-            reason: 'Player left',
-            winner: room.winner,
+            userId: user.id,
             room: sanitizeRoom(room)
           }
         });
@@ -229,8 +271,9 @@ function leaveRoom(socket, io, user, broadcast = true) {
     }
   }
 
-  // Delete room if empty
-  if (room.players.length === 0 && room.spectators.length === 0) {
+  // Delete room if all player slots are empty and no spectators
+  const activePlayers = room.players.filter(p => p !== null);
+  if (activePlayers.length === 0 && room.spectators.length === 0) {
     rooms.delete(roomId);
     console.log(`[Tic-Tac-Toe] Room ${roomId} deleted (empty)`);
   }
@@ -361,6 +404,55 @@ function handleRematch(socket, io, user) {
   console.log(`[Tic-Tac-Toe] Rematch started in room ${roomId}`);
 }
 
+function handleNewGame(socket, io, user, data) {
+  const roomId = socket.currentRoom;
+  if (!roomId) return;
+
+  const room = rooms.get(roomId);
+  if (!room || room.gameState !== 'finished') return;
+
+  // Only host can start new game with new settings
+  if (room.host !== user.id) {
+    socket.emit('game-event', {
+      event: 'error',
+      data: { message: 'Only the host can change game settings' }
+    });
+    return;
+  }
+
+  // Validate new settings
+  const boardSize = Math.min(Math.max(data.boardSize || room.boardSize, 3), 10);
+  const winCondition = Math.min(Math.max(data.winCondition || room.winCondition, 3), 5);
+
+  if (winCondition > boardSize) {
+    socket.emit('game-event', {
+      event: 'error',
+      data: { message: 'Win condition cannot be greater than board size' }
+    });
+    return;
+  }
+
+  // Update room settings
+  room.boardSize = boardSize;
+  room.winCondition = winCondition;
+
+  // Reset board with new size
+  room.board = Array(boardSize).fill(null).map(() =>
+    Array(boardSize).fill(null)
+  );
+  room.currentTurn = 0;
+  room.gameState = 'playing';
+  room.winner = null;
+  room.winningLine = null;
+
+  broadcastToRoom(io, roomId, {
+    event: 'game-started',
+    data: { room: sanitizeRoom(room) }
+  });
+
+  console.log(`[Tic-Tac-Toe] New game started in room ${roomId} with ${boardSize}x${boardSize} board`);
+}
+
 function handleChat(socket, io, user, data) {
   const roomId = socket.currentRoom;
   if (!roomId) return;
@@ -456,36 +548,44 @@ function generateRoomId() {
 }
 
 function sanitizeRoom(room) {
+  // Filter out null players for accurate count
+  const activePlayers = room.players.filter(p => p !== null);
+
   return {
     id: room.id,
     name: room.name,
     host: room.host,
     boardSize: room.boardSize,
     winCondition: room.winCondition,
-    players: room.players,
+    players: room.players, // Keep nulls so client knows which slots are open
     spectators: room.spectators,
     board: room.board,
     currentTurn: room.currentTurn,
     gameState: room.gameState,
     winner: room.winner,
     winningLine: room.winningLine,
-    playerCount: room.players.length,
+    playerCount: activePlayers.length,
     spectatorCount: room.spectators.length
   };
 }
 
 function sendRoomList(socket) {
-  const roomList = Array.from(rooms.values()).map(room => ({
-    id: room.id,
-    name: room.name,
-    host: room.host,
-    boardSize: room.boardSize,
-    winCondition: room.winCondition,
-    playerCount: room.players.length,
-    spectatorCount: room.spectators.length,
-    gameState: room.gameState,
-    players: room.players.map(p => ({ id: p.id, nickname: p.nickname }))
-  }));
+  const roomList = Array.from(rooms.values()).map(room => {
+    // Filter out null players for room list
+    const activePlayers = room.players.filter(p => p !== null);
+
+    return {
+      id: room.id,
+      name: room.name,
+      host: room.host,
+      boardSize: room.boardSize,
+      winCondition: room.winCondition,
+      playerCount: activePlayers.length,
+      spectatorCount: room.spectators.length,
+      gameState: room.gameState,
+      players: activePlayers.map(p => ({ id: p.id, nickname: p.nickname }))
+    };
+  });
 
   socket.emit('game-event', {
     event: 'room-list',
@@ -494,17 +594,22 @@ function sendRoomList(socket) {
 }
 
 function broadcastRoomList(io) {
-  const roomList = Array.from(rooms.values()).map(room => ({
-    id: room.id,
-    name: room.name,
-    host: room.host,
-    boardSize: room.boardSize,
-    winCondition: room.winCondition,
-    playerCount: room.players.length,
-    spectatorCount: room.spectators.length,
-    gameState: room.gameState,
-    players: room.players.map(p => ({ id: p.id, nickname: p.nickname }))
-  }));
+  const roomList = Array.from(rooms.values()).map(room => {
+    // Filter out null players for room list
+    const activePlayers = room.players.filter(p => p !== null);
+
+    return {
+      id: room.id,
+      name: room.name,
+      host: room.host,
+      boardSize: room.boardSize,
+      winCondition: room.winCondition,
+      playerCount: activePlayers.length,
+      spectatorCount: room.spectators.length,
+      gameState: room.gameState,
+      players: activePlayers.map(p => ({ id: p.id, nickname: p.nickname }))
+    };
+  });
 
   io.emit('game-event', {
     event: 'room-list',

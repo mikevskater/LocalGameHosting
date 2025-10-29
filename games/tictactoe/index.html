@@ -525,8 +525,50 @@
     <div class="modal-content game-over-modal">
       <div class="winner-icon" id="winner-icon">🏆</div>
       <h2 id="winner-text">You Won!</h2>
-      <button class="btn btn-primary" onclick="requestRematch()">Play Again</button>
+      <div id="game-over-host-controls" style="display: none; margin-bottom: 15px;">
+        <p style="color: #666; font-size: 0.9rem;">As room host, you can:</p>
+        <button class="btn btn-primary" onclick="requestRematch()">Play Again (Same Settings)</button>
+        <button class="btn btn-primary" onclick="showNewGameModal()">New Game (Change Settings)</button>
+      </div>
+      <div id="game-over-player-controls">
+        <button class="btn btn-primary" onclick="requestRematch()">Play Again</button>
+      </div>
       <button class="btn btn-secondary" onclick="leaveGame()">Back to Lobby</button>
+    </div>
+  </div>
+
+  <!-- New Game Modal (for host to change settings) -->
+  <div id="new-game-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>New Game Settings</h2>
+        <button class="close-btn" onclick="hideNewGameModal()">×</button>
+      </div>
+
+      <div class="form-group">
+        <label>Board Size</label>
+        <select id="new-board-size">
+          <option value="3">3x3 (Classic)</option>
+          <option value="4">4x4</option>
+          <option value="5">5x5</option>
+          <option value="6">6x6</option>
+          <option value="7">7x7</option>
+          <option value="8">8x8</option>
+          <option value="9">9x9</option>
+          <option value="10">10x10</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Win Condition (in a row)</label>
+        <select id="new-win-condition">
+          <option value="3">3 in a row</option>
+          <option value="4">4 in a row</option>
+          <option value="5">5 in a row</option>
+        </select>
+      </div>
+
+      <button class="btn btn-primary" onclick="startNewGame()" style="width: 100%;">Start New Game</button>
     </div>
   </div>
 

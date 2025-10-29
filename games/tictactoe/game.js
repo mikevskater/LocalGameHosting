@@ -47,6 +47,14 @@ function setupEventListeners() {
     currentRoom = data.room;
     playerRole = data.role;
     playerIndex = data.playerIndex !== undefined ? data.playerIndex : -1;
+
+    // Load chat history if provided
+    if (data.chatHistory && data.chatHistory.length > 0) {
+      data.chatHistory.forEach(msg => {
+        addChatMessage(msg.user, msg.message);
+      });
+    }
+
     showGameScreen();
   });
 
@@ -54,6 +62,13 @@ function setupEventListeners() {
   gameAPI.on('player-joined', (data) => {
     currentRoom = data.room;
     renderPlayers();
+  });
+
+  // Player left
+  gameAPI.on('player-left', (data) => {
+    currentRoom = data.room;
+    renderPlayers();
+    updateTurnIndicator();
   });
 
   // Spectator joined
@@ -224,7 +239,10 @@ function renderGameBoard() {
 function renderPlayers() {
   const container = document.getElementById('players-list');
 
-  if (currentRoom.players.length === 0) {
+  // Filter out null players (disconnected)
+  const activePlayers = currentRoom.players.filter(p => p !== null);
+
+  if (activePlayers.length === 0) {
     container.innerHTML = '<div class="empty-message">Waiting for players...</div>';
     return;
   }
@@ -232,6 +250,21 @@ function renderPlayers() {
   container.innerHTML = currentRoom.players.map((player, index) => {
     const marker = index === 0 ? 'X' : 'O';
     const markerClass = index === 0 ? 'player-x' : 'player-o';
+
+    if (player === null) {
+      // Empty slot
+      return `
+        <div class="player-item" style="opacity: 0.5;">
+          <div class="player-marker ${markerClass}">${marker}</div>
+          <div>
+            <div style="font-weight: bold; color: #999;">
+              Empty Slot
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     const isYou = player.id === currentUser.id;
 
     return `
@@ -277,6 +310,13 @@ function updateTurnIndicator() {
   } else if (currentRoom.gameState === 'playing') {
     const currentPlayer = currentRoom.players[currentRoom.currentTurn];
 
+    // Handle case where player disconnected
+    if (!currentPlayer) {
+      indicator.textContent = 'Waiting for player to rejoin...';
+      indicator.className = 'turn-indicator';
+      return;
+    }
+
     if (playerRole === 'spectator') {
       indicator.textContent = `${currentPlayer.nickname}'s turn`;
       indicator.className = 'turn-indicator';
@@ -305,17 +345,19 @@ function showGameOver(winner, winningLine) {
     icon.textContent = '🏆';
     text.textContent = 'You Won!';
   } else {
-    const winnerPlayer = currentRoom.players.find(p => p.id === winner);
+    const winnerPlayer = currentRoom.players.find(p => p && p.id === winner);
     icon.textContent = '😔';
-    text.textContent = `${winnerPlayer.nickname} Won!`;
+    text.textContent = winnerPlayer ? `${winnerPlayer.nickname} Won!` : 'Game Over';
   }
+
+  // Show appropriate controls based on if user is host
+  const isHost = currentRoom.host === currentUser.id;
+  const isPlayer = playerRole === 'player';
+
+  document.getElementById('game-over-host-controls').style.display = (isHost && isPlayer) ? 'block' : 'none';
+  document.getElementById('game-over-player-controls').style.display = (!isHost && isPlayer) ? 'block' : 'none';
 
   modal.classList.add('active');
-
-  // Show rematch button if you're a player
-  if (playerRole === 'player') {
-    document.getElementById('rematch-btn').style.display = 'inline-block';
-  }
 }
 
 function addChatMessage(user, message) {
@@ -403,6 +445,36 @@ function makeMove(row, col) {
 function requestRematch() {
   document.getElementById('game-over-modal').classList.remove('active');
   gameAPI.emit('rematch', {});
+}
+
+function showNewGameModal() {
+  // Pre-fill with current settings
+  document.getElementById('new-board-size').value = currentRoom.boardSize;
+  document.getElementById('new-win-condition').value = currentRoom.winCondition;
+
+  document.getElementById('game-over-modal').classList.remove('active');
+  document.getElementById('new-game-modal').classList.add('active');
+}
+
+function hideNewGameModal() {
+  document.getElementById('new-game-modal').classList.remove('active');
+}
+
+function startNewGame() {
+  const boardSize = parseInt(document.getElementById('new-board-size').value);
+  const winCondition = parseInt(document.getElementById('new-win-condition').value);
+
+  if (winCondition > boardSize) {
+    alert('Win condition cannot be greater than board size');
+    return;
+  }
+
+  gameAPI.emit('new-game', {
+    boardSize,
+    winCondition
+  });
+
+  hideNewGameModal();
 }
 
 function escapeHtml(text) {
