@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const config = require('../../server/config');
 
 // Vote state
 let voteState = {
@@ -81,7 +82,6 @@ function handleVote(socket, io, user, data) {
   }
 
   // Check if vote is within last 10 seconds
-  const config = require('../../config');
   const addTime = config.get('voting.newVoteTimeAddAmount') || 15;
 
   if (voteState.timeRemaining <= 10 && voteState.timeRemaining > 0) {
@@ -128,7 +128,6 @@ function startVote(io) {
     return;
   }
 
-  const config = require('../../config');
   const gamesDir = config.get('game.gamesDirectory');
   const excludedGames = config.get('voting.excludedGames') || [];
   const voteTime = config.get('voting.voteTime') || 60;
@@ -215,7 +214,6 @@ function processVoteResults(io) {
     endVote(io, winners[0]);
   } else {
     // Tie - check if we should do tie-breaker or random pick
-    const config = require('../../config');
     const maxTieRounds = config.get('voting.maxTieRounds') || 3;
 
     // Check if same tie as last round
@@ -247,7 +245,6 @@ function processVoteResults(io) {
 }
 
 function startTieBreakerRound(io, tiedGames) {
-  const config = require('../../config');
   const voteTime = config.get('voting.voteTime') || 60;
 
   voteState.round++;
@@ -297,8 +294,6 @@ function endVote(io, winnerGameId) {
 }
 
 function switchToGame(io, gameId) {
-  const config = require('../../config');
-
   // Update active game
   config.set('game.activeGame', gameId);
 
@@ -333,7 +328,6 @@ function stopVote() {
 }
 
 function getVoteStateForClient(userId) {
-  const config = require('../../config');
   const showLiveResults = config.get('voting.showLiveResults') !== false;
 
   return {
