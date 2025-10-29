@@ -204,9 +204,20 @@ setTimeout(() => {
     // Clean expired sessions on startup
     try {
       db.cleanExpiredSessions();
+      console.log('Cleaned expired admin sessions');
     } catch (error) {
       console.error('Error cleaning sessions:', error.message);
     }
+
+    // Clean expired sessions every hour
+    setInterval(() => {
+      try {
+        db.cleanExpiredSessions();
+        console.log('Cleaned expired admin sessions');
+      } catch (error) {
+        console.error('Error cleaning sessions:', error.message);
+      }
+    }, 60 * 60 * 1000); // 1 hour
 
     // Load active game module
     const activeGame = config.get('game.activeGame');

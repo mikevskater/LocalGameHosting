@@ -101,6 +101,9 @@ class AuthService {
         return { success: false, error: 'Invalid admin credentials' };
       }
 
+      // Clean up expired sessions first
+      db.cleanExpiredSessions();
+
       // Generate admin token
       const token = this.generateAdminToken(username);
 
@@ -134,15 +137,13 @@ class AuthService {
         return false;
       }
 
-      // Check if session exists in database
-      try {
-        const session = db.validateAdminSession(token);
-        return !!session;
-      } catch (dbError) {
-        // If database check fails, just verify JWT signature
-        console.warn('Database validation failed, using JWT only:', dbError.message);
-        return true;
+      // MUST check if session exists in database (no fallback)
+      const session = db.validateAdminSession(token);
+      if (!session) {
+        return false;
       }
+
+      return true;
     } catch (error) {
       return false;
     }

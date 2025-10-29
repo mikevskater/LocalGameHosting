@@ -61,7 +61,8 @@ class ConfigManager {
   }
 
   getAll() {
-    return { ...this.config };
+    // Return deep copy to prevent accidental mutation
+    return JSON.parse(JSON.stringify(this.config));
   }
 
   update(newConfig) {

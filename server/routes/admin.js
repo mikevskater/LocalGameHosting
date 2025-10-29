@@ -57,8 +57,8 @@ router.delete('/users/:userId', auth.adminAuthMiddleware, (req, res) => {
 // Get current configuration (admin only)
 router.get('/config', auth.adminAuthMiddleware, (req, res) => {
   const currentConfig = config.getAll();
-  // Hide sensitive data
-  const safeConfig = { ...currentConfig };
+  // Hide sensitive data (must use deep copy to avoid mutating original)
+  const safeConfig = JSON.parse(JSON.stringify(currentConfig));
   if (safeConfig.admin) {
     safeConfig.admin.password = '********';
   }

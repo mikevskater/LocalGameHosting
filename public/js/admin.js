@@ -41,6 +41,10 @@ class AdminAPI {
       const data = await response.json();
 
       if (!response.ok) {
+        // If unauthorized, clear token
+        if (response.status === 401) {
+          this.logout();
+        }
         throw new Error(data.error || 'Failed to get stats');
       }
 
@@ -59,6 +63,10 @@ class AdminAPI {
       const data = await response.json();
 
       if (!response.ok) {
+        // If unauthorized, clear token
+        if (response.status === 401) {
+          this.logout();
+        }
         throw new Error(data.error || 'Failed to get users');
       }
 
@@ -137,6 +145,10 @@ class AdminAPI {
       const data = await response.json();
 
       if (!response.ok) {
+        // If unauthorized, clear token
+        if (response.status === 401) {
+          this.logout();
+        }
         throw new Error(data.error || 'Failed to get games');
       }
 
@@ -175,11 +187,13 @@ const adminAPI = new AdminAPI();
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   if (adminAPI.token) {
-    // Try to load dashboard
+    // Try to validate token by getting stats
     const statsResult = await adminAPI.getStats();
     if (statsResult.success) {
       showDashboard();
     } else {
+      // Token is invalid or expired, clear it and show login
+      adminAPI.logout();
       showLogin();
     }
   } else {
