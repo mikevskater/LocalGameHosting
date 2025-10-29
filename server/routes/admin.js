@@ -6,7 +6,9 @@ const gameLoader = require('../gameLoader');
 const fs = require('fs');
 const path = require('path');
 
-const router = express.Router();
+// Export a function that accepts io instance
+module.exports = (io) => {
+  const router = express.Router();
 
 // Admin login
 router.post('/login', async (req, res) => {
@@ -150,6 +152,15 @@ router.post('/games/switch', auth.adminAuthMiddleware, (req, res) => {
   // Load the new game module
   gameLoader.loadGame(gameId);
 
+  // Wait for game to load, then notify all clients to refresh
+  setTimeout(() => {
+    io.emit('game-event', {
+      event: 'game-switched',
+      data: { newGame: gameId }
+    });
+    console.log(`[Admin] Notified all clients to switch to game: ${gameId}`);
+  }, 1000);
+
   res.json({ message: `Switched to game: ${gameId}` });
 });
 
@@ -166,4 +177,5 @@ router.get('/stats', auth.adminAuthMiddleware, (req, res) => {
   });
 });
 
-module.exports = router;
+  return router;
+};

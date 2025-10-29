@@ -248,6 +248,16 @@ async function loadDashboardData() {
     const config = configResult.config;
     document.getElementById('config-port').value = config.server.port;
     document.getElementById('config-host').value = config.server.host;
+
+    // Load voting settings
+    if (config.voting) {
+      document.getElementById('vote-time').value = config.voting.voteTime || 60;
+      document.getElementById('vote-time-add').value = config.voting.newVoteTimeAddAmount || 15;
+      document.getElementById('auto-win-count').value = config.voting.autoWinCount || 0;
+      document.getElementById('max-tie-rounds').value = config.voting.maxTieRounds || 3;
+      document.getElementById('show-live-results').checked = config.voting.showLiveResults !== false;
+      document.getElementById('excluded-games').value = (config.voting.excludedGames || []).join(', ');
+    }
   }
 
   // Load games
@@ -397,4 +407,36 @@ function showSuccess(elementId, message) {
   setTimeout(() => {
     element.classList.add('hidden');
   }, 5000);
+}
+
+async function saveVotingSettings() {
+  const voteTime = parseInt(document.getElementById('vote-time').value);
+  const voteTimeAdd = parseInt(document.getElementById('vote-time-add').value);
+  const autoWinCount = parseInt(document.getElementById('auto-win-count').value);
+  const maxTieRounds = parseInt(document.getElementById('max-tie-rounds').value);
+  const showLiveResults = document.getElementById('show-live-results').checked;
+  const excludedGamesInput = document.getElementById('excluded-games').value;
+
+  // Parse excluded games
+  const excludedGames = excludedGamesInput
+    .split(',')
+    .map(g => g.trim())
+    .filter(g => g.length > 0);
+
+  const result = await adminAPI.updateConfig({
+    voting: {
+      voteTime,
+      newVoteTimeAddAmount: voteTimeAdd,
+      autoWinCount,
+      maxTieRounds,
+      showLiveResults,
+      excludedGames
+    }
+  });
+
+  if (result.success) {
+    showSuccess('voting-success', 'Voting settings saved successfully!');
+  } else {
+    showError('voting-error', result.error);
+  }
 }

@@ -21,5 +21,13 @@
   "uploads": {
     "profilePictures": "./uploads/profile-pictures",
     "maxFileSize": 5242880
+  },
+  "voting": {
+    "excludedGames": [],
+    "voteTime": 60,
+    "newVoteTimeAddAmount": 15,
+    "autoWinCount": 0,
+    "showLiveResults": true,
+    "maxTieRounds": 3
   }
 }

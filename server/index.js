@@ -34,7 +34,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // API Routes
 app.use('/api/user', userRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/api/admin', adminRoutes(io)); // Pass io instance
 app.use('/api/game', gameRoutes);
 
 // Serve active game at /play route

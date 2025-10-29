@@ -1,0 +1,10 @@
+{
+  "id": "democracy-vote",
+  "name": "Vote for Next Game",
+  "description": "Democratic voting system for selecting the next game to play",
+  "version": "1.0.0",
+  "type": "multiplayer",
+  "minPlayers": 1,
+  "maxPlayers": 999,
+  "supportsSpectators": false
+}
