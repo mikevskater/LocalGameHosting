@@ -50,13 +50,18 @@ app.get('/play', (req, res) => {
   // Read the game HTML
   let gameHTML = require('fs').readFileSync(gameIndexPath, 'utf8');
 
-  // Inject the overlay script before </body>
-  const overlayScript = `
+  // Inject the required scripts in the <head> section so they load before inline scripts
+  const headScripts = `
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/gameapi.js"></script>
+</head>`;
+
+  // Inject the overlay script before </body>
+  const overlayScript = `
   <script src="/js/game-overlay.js"></script>
 </body>`;
 
+  gameHTML = gameHTML.replace('</head>', headScripts);
   gameHTML = gameHTML.replace('</body>', overlayScript);
 
   res.send(gameHTML);
