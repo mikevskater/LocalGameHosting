@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Number Guessing Game</title>
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/gameapi.js"></script>
   <style>
     * {
       margin: 0;
@@ -340,15 +338,18 @@
       message.className = `message ${type}`;
     }
 
-    // Initialize when API is ready
-    if (gameAPI.isAuthenticated()) {
-      init();
-    } else {
-      document.querySelector('.game-container').innerHTML = `
-        <h1>Not Logged In</h1>
-        <p>Please <a href="/">log in</a> to play this game.</p>
-      `;
-    }
+    // Initialize when page loads
+    // Wait for gameAPI to be ready
+    window.addEventListener('load', () => {
+      if (gameAPI && gameAPI.isAuthenticated()) {
+        init();
+      } else {
+        document.querySelector('.game-container').innerHTML = `
+          <h1>Not Logged In</h1>
+          <p>Please <a href="/">log in</a> to play this game.</p>
+        `;
+      }
+    });
   </script>
 </body>
 </html>

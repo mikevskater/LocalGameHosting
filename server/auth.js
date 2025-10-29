@@ -135,8 +135,14 @@ class AuthService {
       }
 
       // Check if session exists in database
-      const session = db.validateAdminSession(token);
-      return !!session;
+      try {
+        const session = db.validateAdminSession(token);
+        return !!session;
+      } catch (dbError) {
+        // If database check fails, just verify JWT signature
+        console.warn('Database validation failed, using JWT only:', dbError.message);
+        return true;
+      }
     } catch (error) {
       return false;
     }

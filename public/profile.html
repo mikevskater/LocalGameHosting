@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Profile</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/gameapi.js"></script>
+  <style>
+    body {
+      padding: 40px 20px;
+    }
+    .back-button {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <button class="btn btn-secondary back-button" onclick="window.location.href='/play'">← Back to Game</button>
+
+    <div class="header">
+      <h1>Edit Profile</h1>
+    </div>
+    <div class="content">
+      <div id="profile-error" class="error-message hidden"></div>
+      <div id="profile-success" class="success-message hidden"></div>
+
+      <form id="profile-form">
+        <div class="form-group">
+          <label>Nickname</label>
+          <input type="text" id="edit-nickname" required>
+        </div>
+
+        <div class="form-group">
+          <label>Profile Picture</label>
+          <input type="file" id="edit-picture" accept="image/*">
+          <div id="current-picture" style="margin-top: 10px;"></div>
+        </div>
+
+        <div class="color-picker-group">
+          <div class="color-picker">
+            <label>Name Color</label>
+            <input type="color" id="edit-name-color" value="#FFFFFF">
+          </div>
+          <div class="color-picker">
+            <label>Player Color</label>
+            <input type="color" id="edit-player-color" value="#4A90E2">
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/profile.js"></script>
+</body>
+</html>

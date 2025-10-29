@@ -36,7 +36,33 @@ app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/game', gameRoutes);
 
-// Serve active game files
+// Serve active game at /play route
+app.get('/play', (req, res) => {
+  const activeGame = config.get('game.activeGame');
+  const gamesDir = config.get('game.gamesDirectory');
+  const gameIndexPath = path.join(__dirname, '..', gamesDir, activeGame, 'index.html');
+
+  // Check if game exists
+  if (!require('fs').existsSync(gameIndexPath)) {
+    return res.status(404).send('Game not found. Please contact administrator.');
+  }
+
+  // Read the game HTML
+  let gameHTML = require('fs').readFileSync(gameIndexPath, 'utf8');
+
+  // Inject the overlay script before </body>
+  const overlayScript = `
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/gameapi.js"></script>
+  <script src="/js/game-overlay.js"></script>
+</body>`;
+
+  gameHTML = gameHTML.replace('</body>', overlayScript);
+
+  res.send(gameHTML);
+});
+
+// Serve static game assets (CSS, JS, images, etc.)
 app.use('/game', (req, res, next) => {
   const activeGame = config.get('game.activeGame');
   const gamesDir = config.get('game.gamesDirectory');

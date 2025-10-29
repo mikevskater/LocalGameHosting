@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Multiplayer Drawing</title>
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/gameapi.js"></script>
   <style>
     * {
       margin: 0;
@@ -361,19 +359,21 @@
       `).join('');
     }
 
-    // Initialize
-    if (gameAPI.isAuthenticated()) {
-      updatePlayerList();
-      // Update every 5 seconds
-      setInterval(updatePlayerList, 5000);
-    } else {
-      document.body.innerHTML = `
-        <div style="text-align: center; padding: 50px;">
-          <h1>Not Logged In</h1>
-          <p>Please <a href="/" style="color: #2ecc71;">log in</a> to play this game.</p>
-        </div>
-      `;
-    }
+    // Initialize when page loads
+    window.addEventListener('load', () => {
+      if (gameAPI && gameAPI.isAuthenticated()) {
+        updatePlayerList();
+        // Update every 5 seconds
+        setInterval(updatePlayerList, 5000);
+      } else {
+        document.body.innerHTML = `
+          <div style="text-align: center; padding: 50px;">
+            <h1>Not Logged In</h1>
+            <p>Please <a href="/" style="color: #2ecc71;">log in</a> to play this game.</p>
+          </div>
+        `;
+      }
+    });
   </script>
 </body>
 </html>
