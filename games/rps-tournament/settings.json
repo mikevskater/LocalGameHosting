@@ -50,6 +50,15 @@
           "label": "Auto-start when all players ready",
           "settingKey": "autoStart",
           "default": false
+        },
+        {
+          "type": "number",
+          "id": "round-time-limit",
+          "label": "Round Time Limit (seconds)",
+          "settingKey": "roundTimeLimit",
+          "default": 10,
+          "min": 5,
+          "max": 60
         }
       ]
     },

@@ -13,9 +13,21 @@ const matchScreen = document.getElementById('match-screen');
 const resultsScreen = document.getElementById('results-screen');
 
 // Initialize
-gameAPI.on('connected', (data) => {
+window.addEventListener('load', async () => {
+  if (!gameAPI || !gameAPI.isAuthenticated()) {
+    alert('Please log in to play');
+    window.location.href = '/';
+    return;
+  }
+
+  const profileResult = await gameAPI.getProfile();
+  if (!profileResult.success) {
+    window.location.href = '/';
+    return;
+  }
+
   console.log('[RPS Tournament] Connected to server');
-  currentUser = data.user;
+  currentUser = profileResult.user;
   document.getElementById('user-info').textContent = `Playing as ${currentUser.nickname}`;
 });
 
@@ -31,13 +43,6 @@ gameAPI.on('tournament-started', (data) => {
   console.log('[RPS Tournament] Tournament started!');
   tournamentState = data.tournament;
   updateUI();
-});
-
-gameAPI.on('match-choosing', (data) => {
-  console.log('[RPS Tournament] Match choosing phase:', data.matchId);
-  if (currentMatchId === data.matchId) {
-    showChoicesPhase();
-  }
 });
 
 gameAPI.on('choice-locked', (data) => {
@@ -139,17 +144,23 @@ function showLobbyScreen() {
 }
 
 function updateLobbyDisplay() {
-  if (!tournamentState) return;
-
-  // Update player count
-  document.getElementById('player-count').textContent = tournamentState.players.length;
+  if (!tournamentState || !currentUser) {
+    return;
+  }
 
   // Update players list
   const playersContainer = document.getElementById('players-container');
-  if (tournamentState.players.length === 0) {
+
+  // Filter out null/undefined players with extra safety
+  const activePlayers = (tournamentState.players || []).filter(p => p != null);
+
+  // Update player count
+  document.getElementById('player-count').textContent = activePlayers.length;
+
+  if (activePlayers.length === 0) {
     playersContainer.innerHTML = '<p style="text-align: center; opacity: 0.6;">Waiting for players to join...</p>';
   } else {
-    playersContainer.innerHTML = tournamentState.players.map((player, index) => {
+    playersContainer.innerHTML = activePlayers.map((player, index) => {
       const isReady = player.ready;
       const isHost = index === 0;
       const isMe = player.id === currentUser.id;
@@ -169,17 +180,36 @@ function updateLobbyDisplay() {
     }).join('');
   }
 
-  // Update ready button
+  // Determine if current user is in tournament
+  const myPlayer = activePlayers.find(p => p.id === currentUser.id);
+  const isInTournament = myPlayer !== undefined;
+
+  // Update button visibility
+  const joinBtn = document.getElementById('join-btn');
   const readyBtn = document.getElementById('ready-btn');
-  const myPlayer = tournamentState.players.find(p => p.id === currentUser.id);
-  if (myPlayer && myPlayer.ready) {
-    readyBtn.textContent = 'Unready';
-    readyBtn.classList.remove('btn-primary');
-    readyBtn.classList.add('btn-danger');
+  const spectateBtn = document.getElementById('spectate-btn');
+
+  if (isInTournament) {
+    // User is in tournament - show ready/spectate buttons
+    joinBtn.classList.add('hidden');
+    readyBtn.classList.remove('hidden');
+    spectateBtn.classList.remove('hidden');
+
+    // Update ready button state
+    if (myPlayer.ready) {
+      readyBtn.textContent = 'Unready';
+      readyBtn.classList.remove('btn-primary');
+      readyBtn.classList.add('btn-danger');
+    } else {
+      readyBtn.textContent = 'Ready Up!';
+      readyBtn.classList.remove('btn-danger');
+      readyBtn.classList.add('btn-primary');
+    }
   } else {
-    readyBtn.textContent = 'Ready Up!';
-    readyBtn.classList.remove('btn-danger');
-    readyBtn.classList.add('btn-primary');
+    // User is not in tournament - show join button
+    joinBtn.classList.remove('hidden');
+    readyBtn.classList.add('hidden');
+    spectateBtn.classList.add('hidden');
   }
 
   // Update settings display
@@ -196,10 +226,6 @@ function updateLobbyDisplay() {
   document.getElementById('format-display').textContent = formatLabels[tournamentState.settings.format] || 'Best of 3';
   document.getElementById('seeding-display').textContent = seedingLabels[tournamentState.settings.seeding] || 'Random';
   document.getElementById('autostart-display').textContent = tournamentState.settings.autoStart ? 'Yes' : 'No';
-
-  // Show/hide start button (hidden for now - only ready button needed)
-  const startBtn = document.getElementById('start-btn');
-  startBtn.classList.add('hidden');
 }
 
 function showBracketScreen() {
@@ -406,40 +432,21 @@ function updateMatchDisplay() {
   updateMatchHistory(match);
 
   // Handle match state
-  if (match.state === 'countdown') {
-    showCountdownPhase(match);
-  } else if (match.state === 'choosing') {
-    showChoicesPhase();
+  if (match.state === 'choosing') {
+    showChoicesPhase(match);
   } else if (match.state === 'reveal') {
     // Reveal handled by event
   }
 }
 
-function showCountdownPhase(match) {
+let choiceTimerInterval = null;
+
+function showChoicesPhase(match) {
   hideMatchPhases();
 
-  const countdownContainer = document.getElementById('countdown-container');
-  countdownContainer.classList.remove('hidden');
-
-  const countdownEl = document.getElementById('countdown');
-
-  const elapsed = Date.now() - match.countdownStart;
-  const remaining = Math.max(0, 3000 - elapsed);
-  const countdownValue = Math.ceil(remaining / 1000);
-
-  countdownEl.textContent = countdownValue;
-
-  if (countdownValue > 0) {
-    setTimeout(() => {
-      showCountdownPhase(match);
-    }, 100);
+  if (!match) {
+    match = matchesState[currentMatchId];
   }
-}
-
-function showChoicesPhase() {
-  hideMatchPhases();
-
-  const match = matchesState[currentMatchId];
   if (!match) return;
 
   const isSpectator = match.player1.id !== currentUser.id && match.player2.id !== currentUser.id;
@@ -448,10 +455,43 @@ function showChoicesPhase() {
     const choicesContainer = document.getElementById('choices-container');
     choicesContainer.classList.remove('hidden');
 
-    // Enable/disable choice buttons
-    const choiceButtons = document.querySelectorAll('.choice-btn');
+    // Show countdown timer
+    const countdownContainer = document.getElementById('countdown-container');
+    const countdownEl = document.getElementById('countdown');
+
     const hasChosen = (match.player1.id === currentUser.id && match.player1.hasChosen) ||
                       (match.player2.id === currentUser.id && match.player2.hasChosen);
+
+    // Only show timer if user hasn't chosen yet
+    if (!hasChosen && match.choiceDeadline) {
+      countdownContainer.classList.remove('hidden');
+
+      // Clear any existing timer
+      if (choiceTimerInterval) {
+        clearInterval(choiceTimerInterval);
+      }
+
+      // Update countdown every 100ms
+      choiceTimerInterval = setInterval(() => {
+        const remaining = Math.max(0, match.choiceDeadline - Date.now());
+        const seconds = Math.ceil(remaining / 1000);
+        countdownEl.textContent = seconds;
+
+        if (remaining <= 0) {
+          clearInterval(choiceTimerInterval);
+          choiceTimerInterval = null;
+        }
+      }, 100);
+    } else {
+      countdownContainer.classList.add('hidden');
+      if (choiceTimerInterval) {
+        clearInterval(choiceTimerInterval);
+        choiceTimerInterval = null;
+      }
+    }
+
+    // Enable/disable choice buttons
+    const choiceButtons = document.querySelectorAll('.choice-btn');
 
     choiceButtons.forEach(btn => {
       btn.disabled = hasChosen;
@@ -590,6 +630,15 @@ function hideAllScreens() {
 
 // Button Actions
 
+function joinTournament() {
+  console.log('[RPS Tournament Client] Joining tournament...');
+  gameAPI.emit('join-tournament', {});
+}
+
+function spectate() {
+  gameAPI.emit('leave-tournament', {});
+}
+
 function toggleReady() {
   const myPlayer = tournamentState.players.find(p => p.id === currentUser.id);
 
@@ -609,6 +658,16 @@ function makeChoice(choice) {
     matchId: currentMatchId,
     choice: choice
   });
+
+  // Hide the countdown timer
+  const countdownContainer = document.getElementById('countdown-container');
+  countdownContainer.classList.add('hidden');
+
+  // Clear the timer interval
+  if (choiceTimerInterval) {
+    clearInterval(choiceTimerInterval);
+    choiceTimerInterval = null;
+  }
 
   // Update UI immediately
   const choiceButtons = document.querySelectorAll('.choice-btn');

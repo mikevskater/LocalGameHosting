@@ -9,7 +9,8 @@ let tournament = {
     format: 'bo3', // 'bo3' | 'bo5' | 'bo7'
     seeding: 'random', // 'random' | 'order'
     autoStart: false,
-    readyTimeout: 0
+    readyTimeout: 0,
+    roundTimeLimit: 10 // seconds
   },
   players: [], // [{ id, nickname, nameColor, ready, seed, eliminated, placement }]
   bracket: [], // [[match1, match2], [match3], [final]]
@@ -35,10 +36,12 @@ function onLoad() {
   const format = settingsManager.getSetting(gameId, 'format') || 'bo3';
   const seeding = settingsManager.getSetting(gameId, 'seeding') || 'random';
   const autoStart = settingsManager.getSetting(gameId, 'autoStart') || false;
+  const roundTimeLimit = settingsManager.getSetting(gameId, 'roundTimeLimit') || 10;
 
   tournament.settings.format = format;
   tournament.settings.seeding = seeding;
   tournament.settings.autoStart = autoStart;
+  tournament.settings.roundTimeLimit = roundTimeLimit;
 
   console.log('[RPS Tournament] Loaded settings:', tournament.settings);
 }
@@ -69,24 +72,31 @@ function handleConnection(socket, io, user) {
     data: getTournamentStateForClient()
   });
 
-  // Handle player ready
-  socket.on('player-ready', () => {
-    handlePlayerReady(socket, io, user);
-  });
+  // Handle game events
+  socket.on('game-event', (eventData) => {
+    const event = eventData.event;
+    const data = eventData.data;
 
-  // Handle player unready
-  socket.on('player-unready', () => {
-    handlePlayerUnready(socket, io, user);
-  });
-
-  // Handle match choice
-  socket.on('make-choice', (data) => {
-    handleMakeChoice(socket, io, user, data);
-  });
-
-  // Handle new tournament
-  socket.on('new-tournament', () => {
-    handleNewTournament(socket, io, user);
+    switch (event) {
+      case 'join-tournament':
+        handleJoinTournament(socket, io, user);
+        break;
+      case 'leave-tournament':
+        handleLeaveTournament(socket, io, user);
+        break;
+      case 'player-ready':
+        handlePlayerReady(socket, io, user);
+        break;
+      case 'player-unready':
+        handlePlayerUnready(socket, io, user);
+        break;
+      case 'make-choice':
+        handleMakeChoice(socket, io, user, data);
+        break;
+      case 'new-tournament':
+        handleNewTournament(socket, io, user);
+        break;
+    }
   });
 }
 
@@ -118,22 +128,67 @@ function handleDisconnection(socket, io, user) {
   }
 }
 
+function handleJoinTournament(socket, io, user) {
+  if (tournament.state !== 'lobby') {
+    socket.emit('game-event', {
+      event: 'error',
+      data: { message: 'Tournament has already started' }
+    });
+    return;
+  }
+
+  // Check if already in tournament
+  const existingPlayer = tournament.players.find(p => p.id === user.id);
+  if (existingPlayer) {
+    console.log(`[RPS Tournament] ${user.nickname} already in tournament`);
+    return;
+  }
+
+  // Add player to tournament
+  const player = {
+    id: user.id,
+    nickname: user.nickname,
+    nameColor: user.name_color,
+    ready: false,
+    seed: 0,
+    eliminated: false,
+    placement: null
+  };
+  tournament.players.push(player);
+
+  console.log(`[RPS Tournament] ${user.nickname} joined tournament`);
+  broadcastTournamentState(io);
+}
+
+function handleLeaveTournament(socket, io, user) {
+  if (tournament.state !== 'lobby') {
+    socket.emit('game-event', {
+      event: 'error',
+      data: { message: 'Cannot leave after tournament has started' }
+    });
+    return;
+  }
+
+  // Remove player from tournament
+  const playerIndex = tournament.players.findIndex(p => p.id === user.id);
+  if (playerIndex !== -1) {
+    tournament.players.splice(playerIndex, 1);
+    console.log(`[RPS Tournament] ${user.nickname} left tournament`);
+    broadcastTournamentState(io);
+  }
+}
+
 function handlePlayerReady(socket, io, user) {
   if (tournament.state !== 'lobby') return;
 
-  // Add player if not already in list
-  let player = tournament.players.find(p => p.id === user.id);
+  // Check if player is in tournament
+  const player = tournament.players.find(p => p.id === user.id);
   if (!player) {
-    player = {
-      id: user.id,
-      nickname: user.nickname,
-      nameColor: user.name_color,
-      ready: false,
-      seed: 0,
-      eliminated: false,
-      placement: null
-    };
-    tournament.players.push(player);
+    socket.emit('game-event', {
+      event: 'error',
+      data: { message: 'You must join the tournament first' }
+    });
+    return;
   }
 
   player.ready = true;
@@ -270,6 +325,8 @@ function startRoundMatches(io, roundIndex) {
     const format = tournament.settings.format;
     const targetWins = format === 'bo3' ? 2 : format === 'bo5' ? 3 : 4;
 
+    const roundTimeLimit = tournament.settings.roundTimeLimit * 1000; // Convert to milliseconds
+
     matches[matchId] = {
       id: matchId,
       round: roundIndex,
@@ -279,33 +336,50 @@ function startRoundMatches(io, roundIndex) {
         nickname: bracketMatch.player1.nickname,
         nameColor: bracketMatch.player1.nameColor,
         score: 0,
-        choice: null
+        choice: null,
+        hasChosen: false
       },
       player2: {
         id: bracketMatch.player2.id,
         nickname: bracketMatch.player2.nickname,
         nameColor: bracketMatch.player2.nameColor,
         score: 0,
-        choice: null
+        choice: null,
+        hasChosen: false
       },
-      state: 'countdown', // 'countdown' | 'choosing' | 'reveal' | 'finished'
+      state: 'choosing', // 'choosing' | 'reveal' | 'finished'
       currentGame: 1,
       targetWins: targetWins,
       history: [],
       winner: null,
-      countdownStart: Date.now()
+      choiceDeadline: Date.now() + roundTimeLimit,
+      choiceTimer: null
     };
 
-    // Start countdown (3 seconds)
-    setTimeout(() => {
-      if (matches[matchId] && matches[matchId].state === 'countdown') {
-        matches[matchId].state = 'choosing';
-        io.emit('game-event', {
-          event: 'match-choosing',
-          data: { matchId: matchId }
-        });
+    // Start timer for auto-pick random choices when time runs out
+    matches[matchId].choiceTimer = setTimeout(() => {
+      if (matches[matchId] && matches[matchId].state === 'choosing') {
+        const match = matches[matchId];
+
+        // Auto-pick random choice for players who haven't chosen
+        if (!match.player1.hasChosen) {
+          const randomChoice = ['rock', 'paper', 'scissors'][Math.floor(Math.random() * 3)];
+          match.player1.choice = randomChoice;
+          match.player1.hasChosen = true;
+          console.log(`[RPS Tournament] Auto-picked ${randomChoice} for ${match.player1.nickname}`);
+        }
+
+        if (!match.player2.hasChosen) {
+          const randomChoice = ['rock', 'paper', 'scissors'][Math.floor(Math.random() * 3)];
+          match.player2.choice = randomChoice;
+          match.player2.hasChosen = true;
+          console.log(`[RPS Tournament] Auto-picked ${randomChoice} for ${match.player2.nickname}`);
+        }
+
+        // Both players have choices now, resolve the round
+        resolveMatchRound(io, matchId);
       }
-    }, 3000);
+    }, roundTimeLimit);
   });
 
   broadcastTournamentState(io);
@@ -324,8 +398,9 @@ function handleMakeChoice(socket, io, user, data) {
   }
 
   // Record choice
-  if (match.player1.id === user.id && !match.player1.choice) {
+  if (match.player1.id === user.id && !match.player1.hasChosen) {
     match.player1.choice = choice;
+    match.player1.hasChosen = true;
     console.log(`[RPS Tournament] ${user.nickname} chose ${choice}`);
 
     // Notify that player made choice (but don't reveal)
@@ -333,8 +408,9 @@ function handleMakeChoice(socket, io, user, data) {
       event: 'choice-locked',
       data: { matchId: matchId, playerId: user.id }
     });
-  } else if (match.player2.id === user.id && !match.player2.choice) {
+  } else if (match.player2.id === user.id && !match.player2.hasChosen) {
     match.player2.choice = choice;
+    match.player2.hasChosen = true;
     console.log(`[RPS Tournament] ${user.nickname} chose ${choice}`);
 
     io.emit('game-event', {
@@ -344,7 +420,12 @@ function handleMakeChoice(socket, io, user, data) {
   }
 
   // Check if both players made choice
-  if (match.player1.choice && match.player2.choice) {
+  if (match.player1.hasChosen && match.player2.hasChosen) {
+    // Cancel the auto-pick timer
+    if (match.choiceTimer) {
+      clearTimeout(match.choiceTimer);
+      match.choiceTimer = null;
+    }
     resolveMatchRound(io, matchId);
   }
 }
@@ -398,23 +479,43 @@ function resolveMatchRound(io, matchId) {
   } else {
     // Next game
     setTimeout(() => {
+      if (!matches[matchId]) return;
+
+      const roundTimeLimit = tournament.settings.roundTimeLimit * 1000;
+
       match.currentGame++;
       match.player1.choice = null;
+      match.player1.hasChosen = false;
       match.player2.choice = null;
-      match.state = 'countdown';
-      match.countdownStart = Date.now();
+      match.player2.hasChosen = false;
+      match.state = 'choosing';
+      match.choiceDeadline = Date.now() + roundTimeLimit;
 
       broadcastTournamentState(io);
 
-      setTimeout(() => {
-        if (matches[matchId] && matches[matchId].state === 'countdown') {
-          matches[matchId].state = 'choosing';
-          io.emit('game-event', {
-            event: 'match-choosing',
-            data: { matchId: matchId }
-          });
+      // Start timer for auto-pick
+      match.choiceTimer = setTimeout(() => {
+        if (matches[matchId] && matches[matchId].state === 'choosing') {
+          const m = matches[matchId];
+
+          // Auto-pick random choice for players who haven't chosen
+          if (!m.player1.hasChosen) {
+            const randomChoice = ['rock', 'paper', 'scissors'][Math.floor(Math.random() * 3)];
+            m.player1.choice = randomChoice;
+            m.player1.hasChosen = true;
+            console.log(`[RPS Tournament] Auto-picked ${randomChoice} for ${m.player1.nickname}`);
+          }
+
+          if (!m.player2.hasChosen) {
+            const randomChoice = ['rock', 'paper', 'scissors'][Math.floor(Math.random() * 3)];
+            m.player2.choice = randomChoice;
+            m.player2.hasChosen = true;
+            console.log(`[RPS Tournament] Auto-picked ${randomChoice} for ${m.player2.nickname}`);
+          }
+
+          resolveMatchRound(io, matchId);
         }
-      }, 3000);
+      }, roundTimeLimit);
     }, 3000);
   }
 }
@@ -709,7 +810,7 @@ function getTournamentStateForClient() {
       active: tournament.active,
       state: tournament.state,
       settings: tournament.settings,
-      players: tournament.players.map(p => ({
+      players: tournament.players.filter(p => p !== null).map(p => ({
         id: p.id,
         nickname: p.nickname,
         nameColor: p.nameColor,
@@ -755,21 +856,21 @@ function getTournamentStateForClient() {
           nickname: match.player1.nickname,
           nameColor: match.player1.nameColor,
           score: match.player1.score,
-          hasChosen: match.player1.choice !== null
+          hasChosen: match.player1.hasChosen
         },
         player2: {
           id: match.player2.id,
           nickname: match.player2.nickname,
           nameColor: match.player2.nameColor,
           score: match.player2.score,
-          hasChosen: match.player2.choice !== null
+          hasChosen: match.player2.hasChosen
         },
         state: match.state,
         currentGame: match.currentGame,
         targetWins: match.targetWins,
         history: match.history,
         winner: match.winner,
-        countdownStart: match.countdownStart
+        choiceDeadline: match.choiceDeadline
       };
       return acc;
     }, {}),
