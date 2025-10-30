@@ -686,8 +686,8 @@ function makeChoice(choice) {
   });
 }
 
-function newTournament() {
-  gameAPI.emit('new-tournament', {});
+function returnToHome() {
+  window.location.href = '/';
 }
 
 function viewBracket() {

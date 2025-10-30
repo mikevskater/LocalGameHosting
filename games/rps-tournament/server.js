@@ -93,9 +93,6 @@ function handleConnection(socket, io, user) {
       case 'make-choice':
         handleMakeChoice(socket, io, user, data);
         break;
-      case 'new-tournament':
-        handleNewTournament(socket, io, user);
-        break;
     }
   });
 }
@@ -776,32 +773,6 @@ function forfeitMatch(io, matchId, userId) {
   });
 
   checkRoundComplete(io, match.round);
-}
-
-function handleNewTournament(socket, io, user) {
-  if (tournament.state !== 'finished') return;
-
-  console.log(`[RPS Tournament] ${user.nickname} requested new tournament`);
-
-  // Reset tournament
-  tournament = {
-    active: false,
-    state: 'lobby',
-    settings: tournament.settings, // Keep settings
-    players: [],
-    bracket: [],
-    currentRound: 0,
-    champion: null
-  };
-
-  matches = {};
-
-  io.emit('game-event', {
-    event: 'tournament-reset',
-    data: {}
-  });
-
-  broadcastTournamentState(io);
 }
 
 function getTournamentStateForClient() {
