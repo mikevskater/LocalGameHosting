@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const config = require('./config');
+const settingsManager = require('./settingsManager');
 
 class GameLoader {
   constructor() {
@@ -17,6 +18,11 @@ class GameLoader {
         this.activeGameModule.onUnload();
       }
 
+      // Clear previous game settings
+      if (this.activeGameId) {
+        settingsManager.clearGameSettings(this.activeGameId);
+      }
+
       const gamesDir = config.get('game.gamesDirectory');
       const gameModulePath = path.join(__dirname, '..', gamesDir, gameId, 'server.js');
 
@@ -31,6 +37,9 @@ class GameLoader {
 
         console.log(`Loaded game module: ${gameId}`);
 
+        // Load game settings from settings.json
+        settingsManager.loadGameSettings(gameId, gamesDir);
+
         // Initialize the module if it has an init function
         if (this.activeGameModule.onLoad) {
           this.activeGameModule.onLoad();
@@ -41,6 +50,10 @@ class GameLoader {
         console.log(`No server module found for game: ${gameId}`);
         this.activeGameModule = null;
         this.activeGameId = gameId;
+
+        // Still try to load settings even if no server module
+        settingsManager.loadGameSettings(gameId, gamesDir);
+
         return false;
       }
     } catch (error) {
@@ -85,6 +98,18 @@ class GameLoader {
   // Get current game module (for admin to trigger special functions)
   getCurrentModule() {
     return this.activeGameModule;
+  }
+
+  // Get settings for current game
+  getGameSettings() {
+    if (!this.activeGameId) return null;
+    return settingsManager.getGameSettings(this.activeGameId);
+  }
+
+  // Get settings state for current game
+  getGameSettingsState() {
+    if (!this.activeGameId) return {};
+    return settingsManager.getGameState(this.activeGameId);
   }
 }
 

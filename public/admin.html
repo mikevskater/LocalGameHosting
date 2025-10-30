@@ -157,6 +157,66 @@
       background: #d4edda;
       color: #155724;
     }
+
+    /* Dynamic Game Settings Styles */
+    .settings-section {
+      margin-bottom: 30px;
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+    }
+
+    .section-description {
+      opacity: 0.7;
+      margin-bottom: 15px;
+      font-size: 0.9rem;
+    }
+
+    .controls-container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .control-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .control-item label {
+      flex: 1;
+      font-weight: 500;
+    }
+
+    .control-item input,
+    .control-item select {
+      flex: 1;
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+    }
+
+    .stat-display {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px 20px;
+      background: white;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .stat-label {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .stat-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #667eea;
+    }
   </style>
 </head>
 <body>
@@ -242,61 +302,10 @@
         </div>
       </div>
 
-      <!-- Voting Settings -->
+      <!-- Dynamic Game Settings -->
       <div class="section">
-        <h2>Voting Settings</h2>
-        <div id="voting-error" class="error-message hidden"></div>
-        <div id="voting-success" class="success-message hidden"></div>
-
-        <div id="vote-controls" style="margin-bottom: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-          <h3 style="margin-top: 0; margin-bottom: 15px;">Vote Control</h3>
-          <p style="color: #666; margin-bottom: 15px;">
-            <strong>Note:</strong> First switch the active game to "Vote for Next Game" above, then start the vote here.
-          </p>
-          <button class="btn btn-primary" onclick="startVote()" style="font-size: 1.1rem; padding: 12px 24px;">
-            🗳️ Start Vote Round
-          </button>
-        </div>
-
-        <div class="config-group">
-          <label>Vote Time (seconds)</label>
-          <input type="number" id="vote-time" min="10" max="600" />
-          <small style="color: #666;">Time for each voting round</small>
-        </div>
-
-        <div class="config-group">
-          <label>Time Added When Vote Cast (<10s remaining)</label>
-          <input type="number" id="vote-time-add" min="5" max="60" />
-          <small style="color: #666;">Extra time added when someone votes with less than 10 seconds left</small>
-        </div>
-
-        <div class="config-group">
-          <label>Auto-Win Vote Count (0 = disabled)</label>
-          <input type="number" id="auto-win-count" min="0" max="100" />
-          <small style="color: #666;">If a game reaches this many votes, it wins immediately</small>
-        </div>
-
-        <div class="config-group">
-          <label>Max Tie-Breaker Rounds</label>
-          <input type="number" id="max-tie-rounds" min="1" max="10" />
-          <small style="color: #666;">After this many identical ties, pick randomly</small>
-        </div>
-
-        <div class="config-group">
-          <label>
-            <input type="checkbox" id="show-live-results" style="width: auto; display: inline-block; margin-right: 8px;" />
-            Show Live Vote Counts
-          </label>
-          <small style="color: #666;">Display real-time vote counts to all players</small>
-        </div>
-
-        <div class="config-group">
-          <label>Excluded Games (comma-separated game IDs)</label>
-          <input type="text" id="excluded-games" placeholder="game-id-1, game-id-2" />
-          <small style="color: #666;">Games that won't appear in voting (e.g., democracy-vote, example-static)</small>
-        </div>
-
-        <button class="btn btn-primary" onclick="saveVotingSettings()">Save Voting Settings</button>
+        <h2>🎮 Game Settings</h2>
+        <div id="game-settings-container"></div>
       </div>
 
       <!-- User Management -->

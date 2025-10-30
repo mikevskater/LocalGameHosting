@@ -180,6 +180,70 @@ class AdminAPI {
       return { success: false, error: error.message };
     }
   }
+
+  async getGameSettings() {
+    try {
+      const response = await fetch('/api/admin/game-settings', {
+        headers: { 'Authorization': `Bearer ${this.token}` }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to get game settings');
+      }
+
+      return { success: true, ...data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  async updateGameSetting(settingKey, value) {
+    try {
+      const response = await fetch(`/api/admin/game-settings/${settingKey}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.token}`
+        },
+        body: JSON.stringify({ value })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update setting');
+      }
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  async executeGameAction(action, params = {}) {
+    try {
+      const response = await fetch(`/api/admin/game-action/${action}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.token}`
+        },
+        body: JSON.stringify(params)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to execute action');
+      }
+
+      return { success: true, result: data.result };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 const adminAPI = new AdminAPI();
@@ -248,16 +312,6 @@ async function loadDashboardData() {
     const config = configResult.config;
     document.getElementById('config-port').value = config.server.port;
     document.getElementById('config-host').value = config.server.host;
-
-    // Load voting settings
-    if (config.voting) {
-      document.getElementById('vote-time').value = config.voting.voteTime || 60;
-      document.getElementById('vote-time-add').value = config.voting.newVoteTimeAddAmount || 15;
-      document.getElementById('auto-win-count').value = config.voting.autoWinCount || 0;
-      document.getElementById('max-tie-rounds').value = config.voting.maxTieRounds || 3;
-      document.getElementById('show-live-results').checked = config.voting.showLiveResults !== false;
-      document.getElementById('excluded-games').value = (config.voting.excludedGames || []).join(', ');
-    }
   }
 
   // Load games
@@ -265,6 +319,12 @@ async function loadDashboardData() {
 
   // Load users
   loadUsers();
+
+  // Load dynamic game settings
+  loadGameSettings();
+
+  // Start stats polling
+  startStatsPolling();
 }
 
 async function loadGames() {
@@ -350,6 +410,9 @@ async function switchGame(gameId) {
     showSuccess('game-success', result.message);
     loadGames();
     loadDashboardData();
+
+    // Reload game settings for new game
+    setTimeout(() => loadGameSettings(), 1500);
   } else {
     showError('game-error', result.error);
   }
@@ -409,55 +472,208 @@ function showSuccess(elementId, message) {
   }, 5000);
 }
 
-async function saveVotingSettings() {
-  const voteTime = parseInt(document.getElementById('vote-time').value);
-  const voteTimeAdd = parseInt(document.getElementById('vote-time-add').value);
-  const autoWinCount = parseInt(document.getElementById('auto-win-count').value);
-  const maxTieRounds = parseInt(document.getElementById('max-tie-rounds').value);
-  const showLiveResults = document.getElementById('show-live-results').checked;
-  const excludedGamesInput = document.getElementById('excluded-games').value;
+// ========== DYNAMIC GAME SETTINGS ==========
 
-  // Parse excluded games
-  const excludedGames = excludedGamesInput
-    .split(',')
-    .map(g => g.trim())
-    .filter(g => g.length > 0);
+async function loadGameSettings() {
+  const result = await adminAPI.getGameSettings();
 
-  const result = await adminAPI.updateConfig({
-    voting: {
-      voteTime,
-      newVoteTimeAddAmount: voteTimeAdd,
-      autoWinCount,
-      maxTieRounds,
-      showLiveResults,
-      excludedGames
-    }
+  const container = document.getElementById('game-settings-container');
+  if (!container) return;
+
+  if (!result.success || !result.schema) {
+    // No settings for this game
+    container.innerHTML = '<p style="opacity: 0.6; text-align: center;">This game has no admin settings.</p>';
+    return;
+  }
+
+  renderGameSettings(result.schema, result.state, result.stats);
+}
+
+function renderGameSettings(schema, state, stats) {
+  const container = document.getElementById('game-settings-container');
+  container.innerHTML = '';
+
+  schema.sections.forEach(section => {
+    const sectionDiv = document.createElement('div');
+    sectionDiv.className = 'settings-section';
+    sectionDiv.innerHTML = `
+      <h3>${section.title}</h3>
+      ${section.description ? `<p class="section-description">${section.description}</p>` : ''}
+      <div class="controls-container" id="section-${section.id}"></div>
+    `;
+    container.appendChild(sectionDiv);
+
+    const controlsContainer = document.getElementById(`section-${section.id}`);
+
+    section.controls.forEach(control => {
+      const controlElement = renderControl(control, state, stats);
+      controlsContainer.appendChild(controlElement);
+    });
   });
+}
 
+function renderControl(control, state, stats) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'control-item';
+
+  switch (control.type) {
+    case 'button':
+      wrapper.innerHTML = `
+        <button
+          class="btn btn-${control.style || 'primary'}"
+          onclick="executeGameAction('${control.action}', ${control.requiresConfirm || false}, '${control.confirmMessage || ''}')"
+          style="width: auto; padding: 12px 24px;"
+        >
+          ${control.label}
+        </button>
+      `;
+      break;
+
+    case 'number':
+      const numValue = state[control.settingKey] ?? control.default;
+      wrapper.innerHTML = `
+        <label>${control.label}</label>
+        <input
+          type="number"
+          value="${numValue}"
+          min="${control.min ?? ''}"
+          max="${control.max ?? ''}"
+          onchange="updateGameSetting('${control.settingKey}', parseInt(this.value))"
+        />
+      `;
+      break;
+
+    case 'text':
+      const textValue = state[control.settingKey] ?? control.default ?? '';
+      wrapper.innerHTML = `
+        <label>${control.label}</label>
+        <input
+          type="text"
+          value="${textValue}"
+          onchange="updateGameSetting('${control.settingKey}', this.value)"
+        />
+      `;
+      break;
+
+    case 'checkbox':
+      const checked = state[control.settingKey] ?? control.default ?? false;
+      wrapper.innerHTML = `
+        <label style="display: flex; align-items: center; gap: 10px;">
+          <input
+            type="checkbox"
+            ${checked ? 'checked' : ''}
+            onchange="updateGameSetting('${control.settingKey}', this.checked)"
+          />
+          <span>${control.label}</span>
+        </label>
+      `;
+      break;
+
+    case 'select':
+      const selectValue = state[control.settingKey] ?? control.default;
+      wrapper.innerHTML = `
+        <label>${control.label}</label>
+        <select onchange="updateGameSetting('${control.settingKey}', this.value)">
+          ${control.options.map(opt =>
+            `<option value="${opt.value}" ${opt.value === selectValue ? 'selected' : ''}>${opt.label}</option>`
+          ).join('')}
+        </select>
+      `;
+      break;
+
+    case 'range':
+      const rangeValue = state[control.settingKey] ?? control.default;
+      wrapper.innerHTML = `
+        <label>${control.label}: <span id="range-${control.id}" style="font-weight: 700; color: #667eea;">${rangeValue}</span></label>
+        <input
+          type="range"
+          value="${rangeValue}"
+          min="${control.min ?? 0}"
+          max="${control.max ?? 100}"
+          step="${control.step || 1}"
+          oninput="document.getElementById('range-${control.id}').textContent = this.value"
+          onchange="updateGameSetting('${control.settingKey}', parseInt(this.value))"
+          style="width: 100%;"
+        />
+      `;
+      break;
+
+    case 'stat':
+      const statValue = stats[control.statKey] ?? 'N/A';
+      wrapper.innerHTML = `
+        <div class="stat-display">
+          <span class="stat-label">${control.label}:</span>
+          <span class="stat-value" id="stat-${control.id}" data-key="${control.statKey}">${statValue}</span>
+        </div>
+      `;
+      break;
+
+    default:
+      wrapper.innerHTML = `<p style="color: red;">Unknown control type: ${control.type}</p>`;
+  }
+
+  return wrapper;
+}
+
+async function updateGameSetting(settingKey, value) {
+  const result = await adminAPI.updateGameSetting(settingKey, value);
   if (result.success) {
-    showSuccess('voting-success', 'Voting settings saved successfully!');
+    console.log('Setting updated:', settingKey, value);
   } else {
-    showError('voting-error', result.error);
+    alert('Error updating setting: ' + result.error);
   }
 }
 
-async function startVote() {
-  try {
-    const response = await fetch('/api/admin/start-vote', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${adminAPI.token}`
-      }
-    });
+async function executeGameAction(action, requiresConfirm, confirmMessage) {
+  if (requiresConfirm && !confirm(confirmMessage || 'Are you sure?')) {
+    return;
+  }
 
-    const data = await response.json();
+  const result = await adminAPI.executeGameAction(action);
+  if (result.success) {
+    console.log('Action executed:', action);
+    // Refresh settings to update stats
+    setTimeout(() => loadGameSettings(), 500);
+  } else {
+    alert('Error executing action: ' + result.error);
+  }
+}
 
-    if (!response.ok) {
-      throw new Error(data.error || 'Failed to start vote');
+// Real-time stats polling
+let statsPollingInterval = null;
+
+function startStatsPolling() {
+  // Clear any existing interval
+  if (statsPollingInterval) {
+    clearInterval(statsPollingInterval);
+  }
+
+  // Poll every 2 seconds
+  statsPollingInterval = setInterval(async () => {
+    const container = document.getElementById('game-settings-container');
+    if (!container || container.children.length === 0) {
+      return; // No settings loaded
     }
 
-    showSuccess('voting-success', 'Vote started successfully!');
-  } catch (error) {
-    showError('voting-error', error.message);
+    const result = await adminAPI.getGameSettings();
+    if (result.success && result.stats) {
+      updateStatsDisplay(result.stats);
+    }
+  }, 2000);
+}
+
+function stopStatsPolling() {
+  if (statsPollingInterval) {
+    clearInterval(statsPollingInterval);
+    statsPollingInterval = null;
   }
+}
+
+function updateStatsDisplay(stats) {
+  Object.keys(stats).forEach(statKey => {
+    const statElements = document.querySelectorAll(`[data-key="${statKey}"]`);
+    statElements.forEach(el => {
+      el.textContent = stats[statKey];
+    });
+  });
 }

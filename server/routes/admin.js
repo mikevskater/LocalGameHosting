@@ -3,6 +3,7 @@ const db = require('../database');
 const auth = require('../auth');
 const config = require('../config');
 const gameLoader = require('../gameLoader');
+const settingsManager = require('../settingsManager');
 const fs = require('fs');
 const path = require('path');
 
@@ -164,35 +165,6 @@ router.post('/games/switch', auth.adminAuthMiddleware, (req, res) => {
   res.json({ message: `Switched to game: ${gameId}` });
 });
 
-// Start vote (admin only) - triggers democracy-vote game module
-router.post('/start-vote', auth.adminAuthMiddleware, (req, res) => {
-  const activeGame = config.get('game.activeGame');
-
-  // Check if democracy-vote is the active game
-  if (activeGame !== 'democracy-vote') {
-    return res.status(400).json({
-      error: 'Democracy vote game must be active. Switch to "Vote for Next Game" first.'
-    });
-  }
-
-  // Get the current game module and call startVote
-  const currentModule = gameLoader.getCurrentModule();
-
-  if (!currentModule || !currentModule.startVote) {
-    return res.status(500).json({
-      error: 'Vote system not available. Make sure democracy-vote game is loaded.'
-    });
-  }
-
-  try {
-    currentModule.startVote(io);
-    res.json({ message: 'Vote started successfully' });
-  } catch (error) {
-    console.error('Error starting vote:', error);
-    res.status(500).json({ error: 'Failed to start vote: ' + error.message });
-  }
-});
-
 // Get server stats (admin only)
 router.get('/stats', auth.adminAuthMiddleware, (req, res) => {
   const users = db.getAllUsers();
@@ -204,6 +176,100 @@ router.get('/stats', auth.adminAuthMiddleware, (req, res) => {
     serverUptime: process.uptime(),
     nodeVersion: process.version
   });
+});
+
+// Get game settings schema and current state (admin only)
+router.get('/game-settings', auth.adminAuthMiddleware, (req, res) => {
+  const activeGame = config.get('game.activeGame');
+
+  if (!activeGame) {
+    return res.status(400).json({ error: 'No active game' });
+  }
+
+  const schema = settingsManager.getGameSettings(activeGame);
+  const state = settingsManager.getGameState(activeGame);
+
+  // Get live stats from game module
+  const gameModule = gameLoader.getCurrentModule();
+  const stats = settingsManager.getLiveStats(activeGame, gameModule);
+
+  res.json({
+    schema: schema,
+    state: state,
+    stats: stats,
+    hasSettings: schema !== null
+  });
+});
+
+// Update a game setting value (admin only)
+router.put('/game-settings/:settingKey', auth.adminAuthMiddleware, (req, res) => {
+  const activeGame = config.get('game.activeGame');
+  const { settingKey } = req.params;
+  const { value } = req.body;
+
+  if (!activeGame) {
+    return res.status(400).json({ error: 'No active game' });
+  }
+
+  if (!settingKey) {
+    return res.status(400).json({ error: 'Setting key is required' });
+  }
+
+  if (value === undefined) {
+    return res.status(400).json({ error: 'Value is required' });
+  }
+
+  try {
+    // Update the setting
+    settingsManager.updateSetting(activeGame, settingKey, value);
+
+    // Notify game module of setting change
+    const gameModule = gameLoader.getCurrentModule();
+    if (gameModule && typeof gameModule.onSettingChanged === 'function') {
+      gameModule.onSettingChanged(settingKey, value, io);
+    }
+
+    // Broadcast to all clients
+    io.emit('game-event', {
+      event: 'setting-changed',
+      data: { settingKey, value }
+    });
+
+    res.json({ success: true, settingKey, value });
+  } catch (error) {
+    console.error('Error updating game setting:', error);
+    res.status(500).json({ error: 'Failed to update setting: ' + error.message });
+  }
+});
+
+// Execute a game action (button click) (admin only)
+router.post('/game-action/:action', auth.adminAuthMiddleware, (req, res) => {
+  const activeGame = config.get('game.activeGame');
+  const { action } = req.params;
+  const params = req.body || {};
+
+  if (!activeGame) {
+    return res.status(400).json({ error: 'No active game' });
+  }
+
+  if (!action) {
+    return res.status(400).json({ error: 'Action is required' });
+  }
+
+  try {
+    const gameModule = gameLoader.getCurrentModule();
+
+    if (!gameModule) {
+      return res.status(400).json({ error: 'Game module not loaded' });
+    }
+
+    const result = settingsManager.executeAction(activeGame, action, gameModule, io, params);
+
+    res.json({ success: true, result });
+  } catch (error) {
+    console.error('Error executing game action:', error);
+    res.status(400).json({ error: error.message });
+  }
 });
 
   return router;
