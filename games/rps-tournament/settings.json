@@ -1,0 +1,94 @@
+{
+  "sections": [
+    {
+      "id": "tournament-controls",
+      "title": "Tournament Controls",
+      "description": "Manage the current tournament",
+      "controls": [
+        {
+          "type": "button",
+          "id": "reset-tournament",
+          "label": "🔄 Reset Tournament",
+          "action": "resetTournament",
+          "style": "danger",
+          "requiresConfirm": true,
+          "confirmMessage": "Are you sure you want to reset the current tournament? All progress will be lost."
+        }
+      ]
+    },
+    {
+      "id": "tournament-settings",
+      "title": "Tournament Settings",
+      "description": "Configure tournament parameters (changes apply to next tournament)",
+      "controls": [
+        {
+          "type": "select",
+          "id": "format",
+          "label": "Match Format",
+          "settingKey": "format",
+          "options": [
+            { "value": "bo3", "label": "Best of 3 (First to 2)" },
+            { "value": "bo5", "label": "Best of 5 (First to 3)" },
+            { "value": "bo7", "label": "Best of 7 (First to 4)" }
+          ],
+          "default": "bo3"
+        },
+        {
+          "type": "select",
+          "id": "seeding",
+          "label": "Seeding Method",
+          "settingKey": "seeding",
+          "options": [
+            { "value": "random", "label": "Random" },
+            { "value": "order", "label": "Join Order" }
+          ],
+          "default": "random"
+        },
+        {
+          "type": "checkbox",
+          "id": "auto-start",
+          "label": "Auto-start when all players ready",
+          "settingKey": "autoStart",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "tournament-stats",
+      "title": "Live Tournament Statistics",
+      "description": "Current tournament status",
+      "controls": [
+        {
+          "type": "stat",
+          "id": "tournament-state",
+          "label": "Tournament State",
+          "statKey": "tournamentState"
+        },
+        {
+          "type": "stat",
+          "id": "player-count",
+          "label": "Players",
+          "statKey": "playerCount"
+        },
+        {
+          "type": "stat",
+          "id": "ready-count",
+          "label": "Ready",
+          "statKey": "readyCount"
+        },
+        {
+          "type": "stat",
+          "id": "current-round",
+          "label": "Current Round",
+          "statKey": "currentRound"
+        },
+        {
+          "type": "stat",
+          "id": "active-matches",
+          "label": "Active Matches",
+          "statKey": "activeMatches"
+        }
+      ]
+    }
+  ]
+}

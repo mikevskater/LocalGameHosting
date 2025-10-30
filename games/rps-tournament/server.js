@@ -1,4 +1,5 @@
 const config = require('../../server/config');
+const settingsManager = require('../../server/settingsManager');
 
 // Tournament state
 let tournament = {
@@ -16,6 +17,9 @@ let tournament = {
   champion: null
 };
 
+// Get current game ID for settings
+const gameId = 'rps-tournament';
+
 // Active matches
 let matches = {}; // matchId -> match object
 
@@ -26,6 +30,17 @@ let connectedUsers = new Map(); // userId -> user object
 
 function onLoad() {
   console.log('[RPS Tournament] Game module loaded');
+
+  // Load settings from settingsManager
+  const format = settingsManager.getSetting(gameId, 'format') || 'bo3';
+  const seeding = settingsManager.getSetting(gameId, 'seeding') || 'random';
+  const autoStart = settingsManager.getSetting(gameId, 'autoStart') || false;
+
+  tournament.settings.format = format;
+  tournament.settings.seeding = seeding;
+  tournament.settings.autoStart = autoStart;
+
+  console.log('[RPS Tournament] Loaded settings:', tournament.settings);
 }
 
 function onUnload() {
@@ -67,16 +82,6 @@ function handleConnection(socket, io, user) {
   // Handle match choice
   socket.on('make-choice', (data) => {
     handleMakeChoice(socket, io, user, data);
-  });
-
-  // Handle settings change (host only)
-  socket.on('update-settings', (data) => {
-    handleUpdateSettings(socket, io, user, data);
-  });
-
-  // Handle start tournament (host only)
-  socket.on('start-tournament', () => {
-    handleStartTournament(socket, io, user);
   });
 
   // Handle new tournament
@@ -154,47 +159,6 @@ function handlePlayerUnready(socket, io, user) {
     console.log(`[RPS Tournament] Player unready: ${user.nickname}`);
     broadcastTournamentState(io);
   }
-}
-
-function handleUpdateSettings(socket, io, user, data) {
-  if (tournament.state !== 'lobby') return;
-
-  // Only first player (host) can update settings
-  if (tournament.players.length > 0 && tournament.players[0].id !== user.id) {
-    return;
-  }
-
-  if (data.format && ['bo3', 'bo5', 'bo7'].includes(data.format)) {
-    tournament.settings.format = data.format;
-  }
-  if (data.seeding && ['random', 'order'].includes(data.seeding)) {
-    tournament.settings.seeding = data.seeding;
-  }
-  if (typeof data.autoStart === 'boolean') {
-    tournament.settings.autoStart = data.autoStart;
-  }
-
-  console.log(`[RPS Tournament] Settings updated by ${user.nickname}:`, tournament.settings);
-  broadcastTournamentState(io);
-}
-
-function handleStartTournament(socket, io, user) {
-  if (tournament.state !== 'lobby') return;
-
-  // Only first player (host) can start
-  if (tournament.players.length > 0 && tournament.players[0].id !== user.id) {
-    return;
-  }
-
-  if (tournament.players.length < 2) {
-    socket.emit('game-event', {
-      event: 'error',
-      data: { message: 'Need at least 2 players to start tournament' }
-    });
-    return;
-  }
-
-  startTournament(io);
 }
 
 function startTournament(io) {
@@ -824,10 +788,113 @@ function getState() {
   return getTournamentStateForClient();
 }
 
+// ========== ADMIN FUNCTIONS ==========
+
+/**
+ * Get live stats for admin panel
+ */
+function getAdminStats() {
+  const stateLabels = {
+    'lobby': 'Lobby',
+    'bracket': 'In Progress',
+    'finished': 'Finished'
+  };
+
+  const readyCount = tournament.players.filter(p => p.ready).length;
+
+  // Count active matches
+  let activeMatchCount = 0;
+  if (tournament.state === 'bracket') {
+    for (const matchId in matches) {
+      if (matches[matchId].state !== 'finished') {
+        activeMatchCount++;
+      }
+    }
+  }
+
+  // Determine current round display
+  let currentRoundDisplay = '-';
+  if (tournament.state === 'bracket' && tournament.bracket.length > 0) {
+    const totalRounds = tournament.bracket.length;
+    const roundNum = tournament.currentRound + 1;
+
+    if (totalRounds === 1) {
+      currentRoundDisplay = 'Finals';
+    } else if (roundNum === totalRounds) {
+      currentRoundDisplay = 'Finals';
+    } else if (roundNum === totalRounds - 1) {
+      currentRoundDisplay = 'Semi-Finals';
+    } else {
+      currentRoundDisplay = `Round ${roundNum}/${totalRounds}`;
+    }
+  }
+
+  return {
+    tournamentState: stateLabels[tournament.state] || 'Unknown',
+    playerCount: tournament.players.length,
+    readyCount: `${readyCount}/${tournament.players.length}`,
+    currentRound: currentRoundDisplay,
+    activeMatches: activeMatchCount
+  };
+}
+
+/**
+ * Reset tournament (admin action)
+ */
+function resetTournament(io, params) {
+  console.log('[RPS Tournament] Admin reset tournament');
+
+  // Reset tournament state
+  tournament = {
+    active: false,
+    state: 'lobby',
+    settings: tournament.settings, // Keep settings
+    players: [],
+    bracket: [],
+    currentRound: 0,
+    champion: null
+  };
+
+  matches = {};
+
+  // Notify all clients
+  io.emit('game-event', {
+    event: 'tournament-reset',
+    data: {}
+  });
+
+  broadcastTournamentState(io);
+
+  return { success: true, message: 'Tournament reset successfully' };
+}
+
+/**
+ * Handle setting changes from admin panel
+ */
+function onSettingChanged(settingKey, value, io) {
+  console.log(`[RPS Tournament] Setting changed: ${settingKey} = ${value}`);
+
+  // Update tournament settings
+  if (settingKey === 'format') {
+    tournament.settings.format = value;
+  } else if (settingKey === 'seeding') {
+    tournament.settings.seeding = value;
+  } else if (settingKey === 'autoStart') {
+    tournament.settings.autoStart = value;
+  }
+
+  // Broadcast updated settings to all clients
+  broadcastTournamentState(io);
+}
+
 module.exports = {
   onLoad,
   onUnload,
   handleConnection,
   handleDisconnection,
-  getState
+  getState,
+  // Admin functions
+  getAdminStats,
+  resetTournament,
+  onSettingChanged
 };

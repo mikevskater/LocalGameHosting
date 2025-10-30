@@ -182,43 +182,24 @@ function updateLobbyDisplay() {
     readyBtn.classList.add('btn-primary');
   }
 
-  // Show/hide start button for host
+  // Update settings display
+  const formatLabels = {
+    'bo3': 'Best of 3',
+    'bo5': 'Best of 5',
+    'bo7': 'Best of 7'
+  };
+  const seedingLabels = {
+    'random': 'Random',
+    'order': 'Join Order'
+  };
+
+  document.getElementById('format-display').textContent = formatLabels[tournamentState.settings.format] || 'Best of 3';
+  document.getElementById('seeding-display').textContent = seedingLabels[tournamentState.settings.seeding] || 'Random';
+  document.getElementById('autostart-display').textContent = tournamentState.settings.autoStart ? 'Yes' : 'No';
+
+  // Show/hide start button (hidden for now - only ready button needed)
   const startBtn = document.getElementById('start-btn');
-  const isHost = tournamentState.players.length > 0 && tournamentState.players[0].id === currentUser.id;
-  if (isHost && tournamentState.players.length >= 2) {
-    startBtn.classList.remove('hidden');
-  } else {
-    startBtn.classList.add('hidden');
-  }
-
-  // Update settings (only host can change)
-  const formatSelect = document.getElementById('format-select');
-  const seedingSelect = document.getElementById('seeding-select');
-  const autostartCheckbox = document.getElementById('autostart-checkbox');
-  const hostBadge = document.getElementById('host-badge');
-  const hostInfo = document.getElementById('host-info');
-
-  formatSelect.value = tournamentState.settings.format;
-  seedingSelect.value = tournamentState.settings.seeding;
-  autostartCheckbox.checked = tournamentState.settings.autoStart;
-
-  if (isHost) {
-    formatSelect.disabled = false;
-    seedingSelect.disabled = false;
-    autostartCheckbox.disabled = false;
-    hostBadge.classList.remove('hidden');
-    hostInfo.textContent = 'You can change these settings';
-
-    formatSelect.onchange = updateSettings;
-    seedingSelect.onchange = updateSettings;
-    autostartCheckbox.onchange = updateSettings;
-  } else {
-    formatSelect.disabled = true;
-    seedingSelect.disabled = true;
-    autostartCheckbox.disabled = true;
-    hostBadge.classList.add('hidden');
-    hostInfo.textContent = 'Only the host can change settings';
-  }
+  startBtn.classList.add('hidden');
 }
 
 function showBracketScreen() {
@@ -617,22 +598,6 @@ function toggleReady() {
   } else {
     gameAPI.emit('player-ready', {});
   }
-}
-
-function updateSettings() {
-  const format = document.getElementById('format-select').value;
-  const seeding = document.getElementById('seeding-select').value;
-  const autoStart = document.getElementById('autostart-checkbox').checked;
-
-  gameAPI.emit('update-settings', {
-    format: format,
-    seeding: seeding,
-    autoStart: autoStart
-  });
-}
-
-function startTournament() {
-  gameAPI.emit('start-tournament', {});
 }
 
 function makeChoice(choice) {

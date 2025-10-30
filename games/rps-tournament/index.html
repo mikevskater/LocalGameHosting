@@ -624,26 +624,19 @@
     <div id="lobby-screen" class="screen active">
       <div class="lobby-container">
         <div id="settings-panel" class="settings-panel">
-          <h3>⚙️ Tournament Settings <span id="host-badge" class="hidden" style="font-size: 0.9rem; color: #ffd700;">(You are Host)</span></h3>
-          <p id="host-info" style="margin-bottom: 15px; opacity: 0.8; font-size: 0.9rem;">Only the host can change settings</p>
+          <h3>⚙️ Tournament Settings</h3>
+          <p style="margin-bottom: 15px; opacity: 0.8; font-size: 0.9rem;">Admin can change settings from the admin panel</p>
           <div class="setting-row">
             <label>Match Format:</label>
-            <select id="format-select" disabled>
-              <option value="bo3">Best of 3</option>
-              <option value="bo5">Best of 5</option>
-              <option value="bo7">Best of 7</option>
-            </select>
+            <span id="format-display">Best of 3</span>
           </div>
           <div class="setting-row">
             <label>Seeding:</label>
-            <select id="seeding-select" disabled>
-              <option value="random">Random</option>
-              <option value="order">Join Order</option>
-            </select>
+            <span id="seeding-display">Random</span>
           </div>
           <div class="setting-row">
             <label>Auto-start when all ready:</label>
-            <input type="checkbox" id="autostart-checkbox" disabled>
+            <span id="autostart-display">No</span>
           </div>
         </div>
 
