@@ -1,0 +1,99 @@
+{
+  "sections": [
+    {
+      "id": "vote-controls",
+      "title": "Vote Control",
+      "description": "Start voting rounds for game selection",
+      "controls": [
+        {
+          "type": "button",
+          "id": "start-vote",
+          "label": "🗳️ Start Vote Round",
+          "action": "startVote",
+          "style": "primary"
+        }
+      ]
+    },
+    {
+      "id": "vote-settings",
+      "title": "Voting Settings",
+      "description": "Configure voting parameters",
+      "controls": [
+        {
+          "type": "number",
+          "id": "vote-time",
+          "label": "Vote Time (seconds)",
+          "settingKey": "voteTime",
+          "min": 10,
+          "max": 600,
+          "default": 60
+        },
+        {
+          "type": "number",
+          "id": "vote-time-add",
+          "label": "Time Added When Vote Cast (<10s remaining)",
+          "settingKey": "newVoteTimeAddAmount",
+          "min": 5,
+          "max": 60,
+          "default": 15
+        },
+        {
+          "type": "number",
+          "id": "auto-win-count",
+          "label": "Auto-Win Vote Count (0 = disabled)",
+          "settingKey": "autoWinCount",
+          "min": 0,
+          "max": 100,
+          "default": 0
+        },
+        {
+          "type": "number",
+          "id": "max-tie-rounds",
+          "label": "Max Tie-Breaker Rounds",
+          "settingKey": "maxTieRounds",
+          "min": 1,
+          "max": 10,
+          "default": 3
+        },
+        {
+          "type": "checkbox",
+          "id": "show-live-results",
+          "label": "Show Live Results During Voting",
+          "settingKey": "showLiveResults",
+          "default": true
+        }
+      ]
+    },
+    {
+      "id": "vote-stats",
+      "title": "Current Vote Status",
+      "description": "Live voting statistics",
+      "controls": [
+        {
+          "type": "stat",
+          "id": "vote-active",
+          "label": "Vote Active",
+          "statKey": "voteActive"
+        },
+        {
+          "type": "stat",
+          "id": "current-round",
+          "label": "Round",
+          "statKey": "currentRound"
+        },
+        {
+          "type": "stat",
+          "id": "votes-cast",
+          "label": "Votes Cast",
+          "statKey": "votesCast"
+        },
+        {
+          "type": "stat",
+          "id": "time-remaining",
+          "label": "Time Remaining",
+          "statKey": "timeRemaining"
+        }
+      ]
+    }
+  ]
+}

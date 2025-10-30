@@ -1,6 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 const config = require('../../server/config');
+const settingsManager = require('../../server/settingsManager');
+
+const gameId = 'democracy-vote';
 
 // Vote state
 let voteState = {
@@ -82,7 +85,7 @@ function handleVote(socket, io, user, data) {
   }
 
   // Check if vote is within last 10 seconds
-  const addTime = config.get('voting.newVoteTimeAddAmount') || 15;
+  const addTime = settingsManager.getSetting(gameId, 'newVoteTimeAddAmount') ?? config.get('voting.newVoteTimeAddAmount') ?? 15;
 
   if (voteState.timeRemaining <= 10 && voteState.timeRemaining > 0) {
     voteState.timeRemaining += addTime;
@@ -107,7 +110,7 @@ function handleVote(socket, io, user, data) {
   broadcastVoteState(io);
 
   // Check for auto-win
-  const autoWinCount = config.get('voting.autoWinCount') || 0;
+  const autoWinCount = settingsManager.getSetting(gameId, 'autoWinCount') ?? config.get('voting.autoWinCount') ?? 0;
   if (autoWinCount > 0 && voteState.results[gameId] >= autoWinCount) {
     console.log(`[Democracy Vote] Auto-win triggered for ${gameId} with ${voteState.results[gameId]} votes`);
     endVote(io, gameId);
@@ -130,7 +133,7 @@ function startVote(io) {
 
   const gamesDir = config.get('game.gamesDirectory');
   const excludedGames = config.get('voting.excludedGames') || [];
-  const voteTime = config.get('voting.voteTime') || 60;
+  const voteTime = settingsManager.getSetting(gameId, 'voteTime') ?? config.get('voting.voteTime') ?? 60;
 
   // Get all available games
   const gamesDirPath = path.join(__dirname, '../..');
@@ -214,7 +217,7 @@ function processVoteResults(io) {
     endVote(io, winners[0]);
   } else {
     // Tie - check if we should do tie-breaker or random pick
-    const maxTieRounds = config.get('voting.maxTieRounds') || 3;
+    const maxTieRounds = settingsManager.getSetting(gameId, 'maxTieRounds') ?? config.get('voting.maxTieRounds') ?? 3;
 
     // Check if same tie as last round
     const lastTie = voteState.tieHistory[voteState.tieHistory.length - 1];
@@ -245,7 +248,7 @@ function processVoteResults(io) {
 }
 
 function startTieBreakerRound(io, tiedGames) {
-  const voteTime = config.get('voting.voteTime') || 60;
+  const voteTime = settingsManager.getSetting(gameId, 'voteTime') ?? config.get('voting.voteTime') ?? 60;
 
   voteState.round++;
   voteState.gameOptions = tiedGames;
@@ -328,7 +331,7 @@ function stopVote() {
 }
 
 function getVoteStateForClient(userId) {
-  const showLiveResults = config.get('voting.showLiveResults') !== false;
+  const showLiveResults = settingsManager.getSetting(gameId, 'showLiveResults') ?? config.get('voting.showLiveResults') ?? true;
 
   return {
     active: voteState.active,
@@ -363,6 +366,35 @@ function getState() {
   };
 }
 
+// ========== ADMIN FUNCTIONS ==========
+
+/**
+ * Get live stats for admin panel
+ */
+function getAdminStats() {
+  const timeRemainingDisplay = voteState.active && voteState.timeRemaining > 0
+    ? `${voteState.timeRemaining}s`
+    : '-';
+
+  return {
+    voteActive: voteState.active ? 'Yes' : 'No',
+    currentRound: voteState.active ? `Round ${voteState.round}` : '-',
+    votesCast: voteState.active ? Object.keys(voteState.votes).length : 0,
+    timeRemaining: timeRemainingDisplay
+  };
+}
+
+/**
+ * Handle setting changes from admin panel
+ */
+function onSettingChanged(settingKey, value, io) {
+  console.log(`[Democracy Vote] Setting changed: ${settingKey} = ${value}`);
+
+  // Settings are read from settingsManager when starting vote,
+  // so no need to update anything here - just log it
+  // The change will take effect on the next vote round
+}
+
 // Export module interface
 module.exports = {
   onLoad,
@@ -370,7 +402,9 @@ module.exports = {
   handleConnection,
   handleDisconnection,
   getState,
-  // Additional exports for admin panel to trigger votes
+  // Admin functions
+  getAdminStats,
+  onSettingChanged,
   startVote,
   stopVote
 };
