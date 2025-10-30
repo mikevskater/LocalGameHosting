@@ -958,15 +958,11 @@ function resetTournament(io, params) {
 
   matches = {};
 
-  // Notify all clients
-  io.emit('game-event', {
-    event: 'tournament-reset',
-    data: {}
-  });
-
+  // Just broadcast the updated state - players can continue viewing results
+  // No need to force everyone back to lobby
   broadcastTournamentState(io);
 
-  return { success: true, message: 'Tournament reset successfully' };
+  return { success: true, message: 'Tournament reset successfully', redirectAdmin: true };
 }
 
 /**

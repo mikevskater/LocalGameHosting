@@ -105,13 +105,6 @@ gameAPI.on('tournament-complete', (data) => {
   }, 2000);
 });
 
-gameAPI.on('tournament-reset', (data) => {
-  console.log('[RPS Tournament] Tournament reset');
-  currentMatchId = null;
-  myChoice = null;
-  showLobbyScreen();
-});
-
 gameAPI.on('time-added', (data) => {
   // Future: show notification
   console.log('[RPS Tournament] Time added:', data);
@@ -231,6 +224,12 @@ function updateLobbyDisplay() {
 function showBracketScreen() {
   hideAllScreens();
   bracketScreen.classList.add('active');
+
+  // Hide back button by default (only shown when explicitly viewing from results)
+  const backBtn = document.getElementById('back-to-results-btn');
+  if (tournamentState.state !== 'finished') {
+    backBtn.classList.add('hidden');
+  }
 
   updateBracketDisplay();
 }
@@ -423,9 +422,17 @@ function updateMatchDisplay() {
     p2Status.textContent = '';
   }
 
-  // Update game counter
-  document.getElementById('current-game').textContent = match.currentGame;
+  // Update game counter - count only non-tie rounds
+  const completedRounds = match.history.filter(r => r.winner !== 0).length;
+  const currentRoundDisplay = completedRounds + 1; // +1 for the current round being played
   const maxGames = match.targetWins * 2 - 1;
+
+  // Show current round only if we're still playing
+  if (match.state === 'choosing' || match.state === 'reveal') {
+    document.getElementById('current-game').textContent = currentRoundDisplay;
+  } else {
+    document.getElementById('current-game').textContent = completedRounds;
+  }
   document.getElementById('max-games').textContent = maxGames;
 
   // Update match history
@@ -684,5 +691,17 @@ function newTournament() {
 }
 
 function viewBracket() {
+  // Show back button when viewing from results
+  const backBtn = document.getElementById('back-to-results-btn');
+  backBtn.classList.remove('hidden');
+
   showBracketScreen();
+}
+
+function backToResults() {
+  // Hide back button
+  const backBtn = document.getElementById('back-to-results-btn');
+  backBtn.classList.add('hidden');
+
+  showResultsScreen();
 }

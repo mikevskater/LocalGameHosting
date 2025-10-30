@@ -632,6 +632,13 @@ async function executeGameAction(action, requiresConfirm, confirmMessage) {
   const result = await adminAPI.executeGameAction(action);
   if (result.success) {
     console.log('Action executed:', action);
+
+    // Check if action wants to redirect admin
+    if (result.result && result.result.redirectAdmin) {
+      window.location.href = '/';
+      return;
+    }
+
     // Refresh settings to update stats
     setTimeout(() => loadGameSettings(), 500);
   } else {
