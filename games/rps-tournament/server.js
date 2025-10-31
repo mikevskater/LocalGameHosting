@@ -29,6 +29,9 @@ let stats = {}; // userId -> stats object
 
 let connectedUsers = new Map(); // userId -> user object
 
+// Chat history
+let chatHistory = []; // Array of { user, message, timestamp }
+
 function onLoad() {
   console.log('[RPS Tournament] Game module loaded');
 
@@ -66,10 +69,16 @@ function handleConnection(socket, io, user) {
 
   connectedUsers.set(user.id, user);
 
-  // Send current tournament state
+  // Send current tournament state and chat history
   socket.emit('game-event', {
     event: 'tournament-state',
     data: getTournamentStateForClient()
+  });
+
+  // Send chat history
+  socket.emit('game-event', {
+    event: 'chat-history',
+    data: { chatHistory }
   });
 
   // Handle game events
@@ -92,6 +101,9 @@ function handleConnection(socket, io, user) {
         break;
       case 'make-choice':
         handleMakeChoice(socket, io, user, data);
+        break;
+      case 'chat-message':
+        handleChatMessage(socket, io, user, data);
         break;
     }
   });
@@ -425,6 +437,33 @@ function handleMakeChoice(socket, io, user, data) {
     }
     resolveMatchRound(io, matchId);
   }
+}
+
+function handleChatMessage(socket, io, user, data) {
+  if (!data.message || typeof data.message !== 'string') return;
+
+  const message = {
+    user: {
+      id: user.id,
+      nickname: user.nickname,
+      nameColor: user.name_color
+    },
+    message: data.message.substring(0, 500), // Limit message length
+    timestamp: Date.now()
+  };
+
+  chatHistory.push(message);
+
+  // Limit history to 50 messages
+  if (chatHistory.length > 50) {
+    chatHistory.shift();
+  }
+
+  // Broadcast to all connected users
+  io.emit('game-event', {
+    event: 'chat-message',
+    data: message
+  });
 }
 
 function resolveMatchRound(io, matchId) {

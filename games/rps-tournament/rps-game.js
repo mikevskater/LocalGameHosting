@@ -110,6 +110,19 @@ gameAPI.on('time-added', (data) => {
   console.log('[RPS Tournament] Time added:', data);
 });
 
+gameAPI.on('chat-history', (data) => {
+  console.log('[RPS Tournament] Chat history loaded:', data.chatHistory.length, 'messages');
+  if (data.chatHistory && data.chatHistory.length > 0) {
+    data.chatHistory.forEach(msg => {
+      addChatMessage(msg.user, msg.message);
+    });
+  }
+});
+
+gameAPI.on('chat-message', (data) => {
+  addChatMessage(data.user, data.message);
+});
+
 gameAPI.on('error', (data) => {
   console.error('[RPS Tournament] Error:', data.message);
   alert(data.message);
@@ -705,3 +718,38 @@ function backToResults() {
 
   showResultsScreen();
 }
+
+// Chat Functions
+
+function addChatMessage(user, message) {
+  const container = document.getElementById('chat-messages');
+
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'chat-message';
+  msgDiv.innerHTML = `
+    <span class="chat-user" style="color: ${user.nameColor}">
+      ${escapeHtml(user.nickname)}:
+    </span>
+    <span>${escapeHtml(message)}</span>
+  `;
+
+  container.appendChild(msgDiv);
+  container.scrollTop = container.scrollHeight;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Chat input listener
+document.getElementById('chat-input').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    const message = e.target.value.trim();
+    if (message) {
+      gameAPI.emit('chat-message', { message });
+      e.target.value = '';
+    }
+  }
+});

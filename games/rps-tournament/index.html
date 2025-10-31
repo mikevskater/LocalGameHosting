@@ -611,6 +611,58 @@
         gap: 30px;
       }
     }
+
+    /* Chat Panel */
+    .chat-panel {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+
+    .chat-title {
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 8px;
+      font-size: 1.1rem;
+    }
+
+    .chat-messages {
+      height: 200px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 6px;
+    }
+
+    .chat-message {
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+      color: #2c3e50;
+    }
+
+    .chat-user {
+      font-weight: bold;
+      margin-right: 5px;
+    }
+
+    .chat-input {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      box-sizing: border-box;
+    }
+
+    .chat-input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
   </style>
 </head>
 <body>
@@ -649,6 +701,13 @@
           <button id="join-btn" class="btn btn-primary" onclick="joinTournament()">Join Tournament</button>
           <button id="ready-btn" class="btn btn-primary hidden" onclick="toggleReady()">Ready Up!</button>
           <button id="spectate-btn" class="btn btn-secondary hidden" onclick="spectate()">Spectate</button>
+        </div>
+
+        <!-- Chat Panel -->
+        <div class="chat-panel">
+          <div class="chat-title">💬 Chat</div>
+          <div class="chat-messages" id="chat-messages"></div>
+          <input type="text" class="chat-input" id="chat-input" placeholder="Type a message and press Enter..." />
         </div>
       </div>
     </div>
