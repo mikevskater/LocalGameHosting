@@ -15,10 +15,29 @@
     }
 
     #game-container {
-      max-width: 1200px;
+      max-width: 1400px;
       margin: 0 auto;
       padding: 20px;
       min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    #main-content {
+      display: flex;
+      gap: 20px;
+      flex: 1;
+    }
+
+    #game-area {
+      flex: 1;
+      min-width: 0;
+    }
+
+    #sidebar {
+      width: 350px;
+      flex-shrink: 0;
     }
 
     /* Header */
@@ -610,6 +629,24 @@
         flex-direction: column;
         gap: 30px;
       }
+
+      #main-content {
+        flex-direction: column;
+      }
+
+      #sidebar {
+        width: 100%;
+        order: -1;
+      }
+
+      .chat-panel {
+        position: relative;
+        top: 0;
+      }
+
+      .chat-messages {
+        height: 150px;
+      }
     }
 
     /* Chat Panel */
@@ -617,8 +654,10 @@
       background: rgba(255, 255, 255, 0.95);
       border-radius: 12px;
       padding: 20px;
-      margin-top: 20px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      height: fit-content;
+      position: sticky;
+      top: 20px;
     }
 
     .chat-title {
@@ -672,8 +711,10 @@
       <p class="subtitle" id="user-info"></p>
     </div>
 
-    <!-- Lobby Screen -->
-    <div id="lobby-screen" class="screen active">
+    <div id="main-content">
+      <div id="game-area">
+        <!-- Lobby Screen -->
+        <div id="lobby-screen" class="screen active">
       <div class="lobby-container">
         <div id="settings-panel" class="settings-panel">
           <h3>⚙️ Tournament Settings</h3>
@@ -701,13 +742,6 @@
           <button id="join-btn" class="btn btn-primary" onclick="joinTournament()">Join Tournament</button>
           <button id="ready-btn" class="btn btn-primary hidden" onclick="toggleReady()">Ready Up!</button>
           <button id="spectate-btn" class="btn btn-secondary hidden" onclick="spectate()">Spectate</button>
-        </div>
-
-        <!-- Chat Panel -->
-        <div class="chat-panel">
-          <div class="chat-title">💬 Chat</div>
-          <div class="chat-messages" id="chat-messages"></div>
-          <input type="text" class="chat-input" id="chat-input" placeholder="Type a message and press Enter..." />
         </div>
       </div>
     </div>
@@ -817,7 +851,18 @@
         </div>
       </div>
     </div>
-  </div>
+      </div><!-- end game-area -->
+
+      <!-- Sidebar with Chat -->
+      <div id="sidebar">
+        <div class="chat-panel">
+          <div class="chat-title">💬 Chat</div>
+          <div class="chat-messages" id="chat-messages"></div>
+          <input type="text" class="chat-input" id="chat-input" placeholder="Type a message and press Enter..." />
+        </div>
+      </div>
+    </div><!-- end main-content -->
+  </div><!-- end game-container -->
 
   <script src="/game/rps-game.js"></script>
 </body>
