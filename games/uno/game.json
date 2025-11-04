@@ -1,0 +1,34 @@
+{
+  "id": "uno",
+  "name": "Uno",
+  "description": "Classic card game with rooms, spectators, and customizable house rules. Match colors and numbers to be the first to empty your hand!",
+  "version": "1.0.0",
+  "type": "multiplayer",
+  "minPlayers": 2,
+  "maxPlayers": 10,
+  "supportsSpectators": true,
+  "author": "Framework Team",
+  "category": "card-game",
+  "features": [
+    "Multi-room support",
+    "2-10 players per room",
+    "Spectator mode",
+    "Real-time chat with history",
+    "Configurable house rules",
+    "Turn timer (optional)",
+    "Statistics tracking",
+    "Reconnection support"
+  ],
+  "rules": {
+    "objective": "Be the first player to get rid of all your cards",
+    "deckSize": 108,
+    "startingCards": 7,
+    "specialCards": [
+      "Skip - Next player loses their turn",
+      "Reverse - Reverses the direction of play",
+      "Draw Two - Next player draws 2 cards and loses their turn",
+      "Wild - Choose any color to continue play",
+      "Wild Draw Four - Choose color and next player draws 4 cards"
+    ]
+  }
+}

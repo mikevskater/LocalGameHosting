@@ -1,0 +1,141 @@
+{
+  "sections": [
+    {
+      "id": "uno-stats",
+      "title": "Live Game Stats",
+      "description": "Current Uno game statistics",
+      "controls": [
+        {
+          "type": "stat",
+          "id": "total-rooms",
+          "label": "Total Rooms",
+          "statKey": "totalRooms"
+        },
+        {
+          "type": "stat",
+          "id": "active-games",
+          "label": "Active Games",
+          "statKey": "activeGames"
+        },
+        {
+          "type": "stat",
+          "id": "total-players",
+          "label": "Total Players",
+          "statKey": "totalPlayers"
+        },
+        {
+          "type": "stat",
+          "id": "total-spectators",
+          "label": "Total Spectators",
+          "statKey": "totalSpectators"
+        }
+      ]
+    },
+    {
+      "id": "default-room-settings",
+      "title": "Default Room Settings",
+      "description": "These are defaults for new rooms. Players can override when creating rooms.",
+      "controls": [
+        {
+          "type": "number",
+          "id": "default-max-players",
+          "label": "Max Players",
+          "settingKey": "defaultMaxPlayers",
+          "min": 2,
+          "max": 10,
+          "default": 4
+        },
+        {
+          "type": "number",
+          "id": "default-turn-timer",
+          "label": "Turn Timer (seconds, 0 = disabled)",
+          "settingKey": "defaultTurnTimer",
+          "min": 0,
+          "max": 300,
+          "default": 30
+        }
+      ]
+    },
+    {
+      "id": "default-house-rules",
+      "title": "Default House Rules",
+      "description": "Default house rules for new rooms (players can customize per room)",
+      "controls": [
+        {
+          "type": "checkbox",
+          "id": "default-draw-until-playable",
+          "label": "Draw Until Playable (keep drawing until you get a playable card)",
+          "settingKey": "defaultDrawUntilPlayable",
+          "default": false
+        },
+        {
+          "type": "checkbox",
+          "id": "default-stacking-draw",
+          "label": "Allow Stacking Draw Cards (play Draw 2 on Draw 2)",
+          "settingKey": "defaultStackingDraw",
+          "default": false
+        },
+        {
+          "type": "checkbox",
+          "id": "default-jump-in",
+          "label": "Allow Jump-In (play identical card out of turn)",
+          "settingKey": "defaultJumpIn",
+          "default": false
+        },
+        {
+          "type": "checkbox",
+          "id": "default-seven-swap",
+          "label": "Seven Swap (playing 7 = swap hands with another player)",
+          "settingKey": "defaultSevenSwap",
+          "default": false
+        },
+        {
+          "type": "checkbox",
+          "id": "default-zero-rotate",
+          "label": "Zero Rotate (playing 0 = all players pass hands clockwise)",
+          "settingKey": "defaultZeroRotate",
+          "default": false
+        },
+        {
+          "type": "checkbox",
+          "id": "default-forced-play",
+          "label": "Forced Play (must play if you have a playable card)",
+          "settingKey": "defaultForcedPlay",
+          "default": false
+        },
+        {
+          "type": "checkbox",
+          "id": "default-challenge-wild-draw4",
+          "label": "Allow Challenging Wild Draw Four",
+          "settingKey": "defaultChallengeWildDraw4",
+          "default": true
+        }
+      ]
+    },
+    {
+      "id": "uno-penalties",
+      "title": "Penalty Settings",
+      "description": "Configure penalty rules",
+      "controls": [
+        {
+          "type": "number",
+          "id": "missed-uno-penalty",
+          "label": "Missed UNO Penalty (cards to draw)",
+          "settingKey": "missedUnoPenalty",
+          "min": 0,
+          "max": 6,
+          "default": 2
+        },
+        {
+          "type": "number",
+          "id": "failed-challenge-penalty",
+          "label": "Failed Wild Draw Four Challenge Penalty",
+          "settingKey": "failedChallengePenalty",
+          "min": 4,
+          "max": 8,
+          "default": 6
+        }
+      ]
+    }
+  ]
+}
