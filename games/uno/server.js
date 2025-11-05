@@ -622,20 +622,44 @@ function drawCard(socket, io, user) {
     reshuffleDeck(room);
   }
 
-  // Draw card
-  const drawnCard = room.deck.pop();
-  room.hands[user.id].push(drawnCard);
+  const topCard = room.discardPile[room.discardPile.length - 1];
+  const drawnCards = [];
+  let foundPlayable = false;
+
+  // Draw until playable (if setting enabled)
+  if (room.settings.drawUntilPlayable) {
+    // Keep drawing until we find a playable card
+    while (!foundPlayable && room.deck.length > 0) {
+      if (room.deck.length === 0) {
+        reshuffleDeck(room);
+      }
+
+      const card = room.deck.pop();
+      room.hands[user.id].push(card);
+      drawnCards.push(card);
+
+      // Check if this card is playable
+      if (isCardPlayable(card, topCard, room.currentColor, room.drawStack)) {
+        foundPlayable = true;
+      }
+    }
+  } else {
+    // Standard rule: draw one card only
+    const card = room.deck.pop();
+    room.hands[user.id].push(card);
+    drawnCards.push(card);
+  }
 
   // Reset UNO flag if player now has more than 1 card
   if (room.hands[user.id].length > 1) {
     room.unoCalled[user.id] = false;
   }
 
-  // Send drawn card to player (private)
+  // Send drawn cards to player (private)
   socket.emit('game-event', {
     event: 'cards-drawn',
     data: {
-      cards: [drawnCard]
+      cards: drawnCards
     }
   });
 
@@ -645,7 +669,7 @@ function drawCard(socket, io, user) {
     data: {
       userId: user.id,
       user: user,
-      cardCount: 1,
+      cardCount: drawnCards.length,
       handSize: room.hands[user.id].length,
       unoCalled: room.unoCalled[user.id]
     }
@@ -657,10 +681,10 @@ function drawCard(socket, io, user) {
     room.turnTimerActive = null;
   }
 
-  // Advance turn (player cannot play drawn card in this implementation)
+  // Advance turn (player cannot play drawn card in standard rules)
   advanceTurn(io, room);
 
-  console.log(`[Uno] ${user.nickname} drew a card`);
+  console.log(`[Uno] ${user.nickname} drew ${drawnCards.length} card(s)`);
 }
 
 // ============================================================================
