@@ -11,6 +11,8 @@ let currentRoom = null;
 let myUserId = null;
 let myHand = [];
 let pendingWildCard = null; // Card waiting for color selection
+let turnTimerInterval = null; // Countdown interval
+let turnEndTime = null; // When the current turn ends
 
 // ============================================================================
 // INITIALIZATION
@@ -479,7 +481,6 @@ function handleCardPlayed(data) {
   // Remove card from hand if it was mine
   if (data.user.id === myUserId) {
     myHand = myHand.filter(c => c.id !== data.card.id);
-    renderPlayerHand();
   } else {
     // Update opponent card count
     if (currentRoom.handSizes) {
@@ -489,6 +490,7 @@ function handleCardPlayed(data) {
 
   renderGameBoard();
   renderOpponents();
+  renderPlayerHand(); // Re-render to update playable highlights
 
   const cardName = getCardName(data.card);
   if (data.user.id !== myUserId) {
@@ -524,6 +526,12 @@ function handleCardDrawn(data) {
     currentRoom.handSizes[data.userId] = data.handSize;
   }
 
+  // Update UNO called status
+  if (currentRoom.unoCalled && data.unoCalled !== undefined) {
+    currentRoom.unoCalled[data.userId] = data.unoCalled;
+  }
+
+  renderPlayers();
   renderOpponents();
 
   if (data.userId !== myUserId) {
@@ -561,6 +569,11 @@ function handleTurnChanged(data) {
   currentRoom.currentPlayerIndex = data.currentPlayerIndex;
   currentRoom.turnDirection = data.turnDirection;
 
+  // Update additional state for card validation
+  if (data.drawStack !== undefined) currentRoom.drawStack = data.drawStack;
+  if (data.currentColor) currentRoom.currentColor = data.currentColor;
+  if (data.topCard) currentRoom.topCard = data.topCard;
+
   updateGameState();
   highlightCurrentPlayer();
 
@@ -570,6 +583,16 @@ function handleTurnChanged(data) {
   // Update direction arrow
   const arrow = data.turnDirection === 1 ? '↻' : '↺';
   document.getElementById('turn-direction').textContent = arrow;
+
+  // Re-render player hand to update playable card highlights
+  renderPlayerHand();
+
+  // Start turn timer if enabled
+  if (currentRoom.settings && currentRoom.settings.turnTimer > 0) {
+    startTurnTimer(currentRoom.settings.turnTimer);
+  } else {
+    stopTurnTimer();
+  }
 }
 
 /**
@@ -583,6 +606,12 @@ function handleTurnTimeout(data) {
     currentRoom.handSizes[data.userId] = data.handSize;
   }
 
+  // Update UNO called status
+  if (currentRoom.unoCalled && data.unoCalled !== undefined) {
+    currentRoom.unoCalled[data.userId] = data.unoCalled;
+  }
+
+  renderPlayers();
   renderOpponents();
 
   if (data.userId === myUserId) {
@@ -1169,6 +1198,80 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// ============================================================================
+// TURN TIMER
+// ============================================================================
+
+/**
+ * Start the turn timer countdown
+ */
+function startTurnTimer(seconds) {
+  // Stop any existing timer
+  stopTurnTimer();
+
+  // Show timer container
+  const container = document.getElementById('turn-timer-container');
+  const timerText = document.getElementById('turn-timer-text');
+  container.style.display = 'flex';
+
+  // Calculate end time
+  turnEndTime = Date.now() + (seconds * 1000);
+
+  // Update immediately
+  updateTurnTimer();
+
+  // Update every 100ms
+  turnTimerInterval = setInterval(updateTurnTimer, 100);
+}
+
+/**
+ * Stop the turn timer
+ */
+function stopTurnTimer() {
+  if (turnTimerInterval) {
+    clearInterval(turnTimerInterval);
+    turnTimerInterval = null;
+  }
+
+  // Hide timer container
+  const container = document.getElementById('turn-timer-container');
+  if (container) {
+    container.style.display = 'none';
+  }
+
+  turnEndTime = null;
+}
+
+/**
+ * Update the turn timer display
+ */
+function updateTurnTimer() {
+  if (!turnEndTime) {
+    stopTurnTimer();
+    return;
+  }
+
+  const remaining = Math.max(0, Math.ceil((turnEndTime - Date.now()) / 1000));
+  const timerText = document.getElementById('turn-timer-text');
+
+  if (!timerText) return;
+
+  timerText.textContent = `${remaining}s`;
+
+  // Update color based on remaining time
+  timerText.className = 'timer-text';
+  if (remaining <= 5) {
+    timerText.classList.add('danger');
+  } else if (remaining <= 10) {
+    timerText.classList.add('warning');
+  }
+
+  // Stop when time's up
+  if (remaining <= 0) {
+    stopTurnTimer();
+  }
 }
 
 // ============================================================================

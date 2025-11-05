@@ -148,13 +148,13 @@ function createRoom(socket, io, user, config) {
     // Settings
     settings: {
       maxPlayers: config.maxPlayers || 4,
-      turnTimer: config.turnTimer || 30,
-      drawUntilPlayable: config.drawUntilPlayable || false,
-      stackingDraw: config.stackingDraw || false,
-      jumpIn: config.jumpIn || false,
-      sevenSwap: config.sevenSwap || false,
-      zeroRotate: config.zeroRotate || false,
-      forcedPlay: config.forcedPlay || false,
+      turnTimer: config.turnTimer !== undefined ? config.turnTimer : 30,
+      drawUntilPlayable: config.drawUntilPlayable === true,
+      stackingDraw: config.stackingDraw === true,
+      jumpIn: config.jumpIn === true,
+      sevenSwap: config.sevenSwap === true,
+      zeroRotate: config.zeroRotate === true,
+      forcedPlay: config.forcedPlay === true,
       challengeWildDraw4: config.challengeWildDraw4 !== false
     },
 
@@ -626,6 +626,11 @@ function drawCard(socket, io, user) {
   const drawnCard = room.deck.pop();
   room.hands[user.id].push(drawnCard);
 
+  // Reset UNO flag if player now has more than 1 card
+  if (room.hands[user.id].length > 1) {
+    room.unoCalled[user.id] = false;
+  }
+
   // Send drawn card to player (private)
   socket.emit('game-event', {
     event: 'cards-drawn',
@@ -641,7 +646,8 @@ function drawCard(socket, io, user) {
       userId: user.id,
       user: user,
       cardCount: 1,
-      handSize: room.hands[user.id].length
+      handSize: room.hands[user.id].length,
+      unoCalled: room.unoCalled[user.id]
     }
   });
 
@@ -729,12 +735,14 @@ function applyCardEffect(io, room, card, user) {
 
       // Check if next player can stack
       const nextPlayer = room.players[room.currentPlayerIndex];
-      const canStack = room.settings.stackingDraw &&
-                      room.hands[nextPlayer.id].some(c => c.type === 'draw2');
+      if (nextPlayer && room.hands[nextPlayer.id]) {
+        const canStack = room.settings.stackingDraw &&
+                        room.hands[nextPlayer.id].some(c => c.type === 'draw2');
 
-      if (!canStack) {
-        // Force draw
-        drawPenaltyCards(io, room, nextPlayer.id);
+        if (!canStack) {
+          // Force draw
+          drawPenaltyCards(io, room, nextPlayer.id);
+        }
       }
       break;
 
@@ -745,12 +753,14 @@ function applyCardEffect(io, room, card, user) {
 
       // Check if next player can stack
       const nextPlayer2 = room.players[room.currentPlayerIndex];
-      const canStack2 = room.settings.stackingDraw &&
-                       room.hands[nextPlayer2.id].some(c => c.type === 'wild-draw4');
+      if (nextPlayer2 && room.hands[nextPlayer2.id]) {
+        const canStack2 = room.settings.stackingDraw &&
+                         room.hands[nextPlayer2.id].some(c => c.type === 'wild-draw4');
 
-      if (!canStack2) {
-        // Force draw
-        drawPenaltyCards(io, room, nextPlayer2.id);
+        if (!canStack2) {
+          // Force draw
+          drawPenaltyCards(io, room, nextPlayer2.id);
+        }
       }
       break;
 
@@ -777,6 +787,11 @@ function drawPenaltyCards(io, room, userId) {
     drawnCards.push(card);
   }
 
+  // Reset UNO flag if player now has more than 1 card
+  if (room.hands[userId].length > 1) {
+    room.unoCalled[userId] = false;
+  }
+
   // Send to affected player
   const playerSocket = getUserSocket(io, userId);
   if (playerSocket) {
@@ -795,7 +810,8 @@ function drawPenaltyCards(io, room, userId) {
       user: player,
       cardCount: count,
       handSize: room.hands[userId].length,
-      penalty: true
+      penalty: true,
+      unoCalled: room.unoCalled[userId]
     }
   });
 
@@ -843,7 +859,10 @@ function advanceTurn(io, room) {
     data: {
       currentPlayer: room.currentPlayer,
       currentPlayerIndex: room.currentPlayerIndex,
-      turnDirection: room.turnDirection
+      turnDirection: room.turnDirection,
+      drawStack: room.drawStack,
+      currentColor: room.currentColor,
+      topCard: room.discardPile[room.discardPile.length - 1] || null
     }
   });
 }
@@ -985,6 +1004,11 @@ function startTurnTimer(io, room) {
       const drawnCard = room.deck.pop();
       room.hands[currentPlayer.id].push(drawnCard);
 
+      // Reset UNO flag if player now has more than 1 card
+      if (room.hands[currentPlayer.id].length > 1) {
+        room.unoCalled[currentPlayer.id] = false;
+      }
+
       // Notify player
       const playerSocket = getUserSocket(io, currentPlayer.id);
       if (playerSocket) {
@@ -1000,7 +1024,8 @@ function startTurnTimer(io, room) {
         data: {
           userId: currentPlayer.id,
           user: currentPlayer,
-          handSize: room.hands[currentPlayer.id].length
+          handSize: room.hands[currentPlayer.id].length,
+          unoCalled: room.unoCalled[currentPlayer.id]
         }
       });
 
