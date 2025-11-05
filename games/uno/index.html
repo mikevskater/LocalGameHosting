@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Uno</title>
+  <link rel="stylesheet" href="/game/style.css">
+</head>
+<body>
+
+  <!-- Lobby Screen -->
+  <div id="lobby-screen" class="screen active">
+    <div class="lobby-header">
+      <h1>🎴 Uno Rooms</h1>
+      <div class="lobby-actions">
+        <button id="create-room-btn" class="btn btn-primary">Create Room</button>
+        <button id="refresh-rooms-btn" class="btn btn-secondary">Refresh</button>
+      </div>
+    </div>
+
+    <div id="rooms-container" class="rooms-grid">
+      <!-- Rooms populated dynamically -->
+      <div class="no-rooms">
+        <p>No rooms available. Create one to get started!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="game-screen" class="screen">
+    <div class="game-container">
+
+      <!-- Main Game Area -->
+      <div class="game-main">
+
+        <!-- Opponents Area (Top) -->
+        <div class="opponents-area" id="opponents-area">
+          <!-- Opponent cards populated dynamically -->
+        </div>
+
+        <!-- Game Board (Center) -->
+        <div class="game-board">
+
+          <!-- Draw Pile -->
+          <div class="draw-pile" id="draw-pile">
+            <div class="card card-back">
+              <span class="card-text">UNO</span>
+            </div>
+            <div class="pile-count" id="deck-count">0</div>
+          </div>
+
+          <!-- Discard Pile -->
+          <div class="discard-pile" id="discard-pile">
+            <!-- Current card populated dynamically -->
+          </div>
+
+          <!-- Game Info -->
+          <div class="game-info">
+            <div class="current-color-indicator">
+              <span class="label">Color:</span>
+              <div class="color-circle" id="current-color"></div>
+            </div>
+            <div class="turn-direction-indicator">
+              <span class="label">Direction:</span>
+              <div class="direction-arrow" id="turn-direction">↻</div>
+            </div>
+            <div class="turn-indicator">
+              <span id="current-turn-text">Waiting for players...</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Player Hand Area (Bottom) -->
+        <div class="player-hand-area">
+          <div id="player-hand" class="player-hand">
+            <!-- Player's cards populated dynamically -->
+          </div>
+
+          <div class="player-actions">
+            <button id="draw-btn" class="btn btn-draw" disabled>
+              <span class="btn-icon">🃏</span> Draw Card
+            </button>
+            <button id="uno-btn" class="btn btn-uno" disabled>
+              <span class="btn-icon">🔥</span> Call UNO!
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Sidebar -->
+      <div class="game-sidebar">
+
+        <!-- Room Info Panel -->
+        <div class="panel room-info-panel">
+          <h3 id="room-name">Room Name</h3>
+          <div id="room-settings" class="room-settings">
+            <!-- Settings populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Players Panel -->
+        <div class="panel players-panel">
+          <h3>Players (<span id="player-count">0</span>)</h3>
+          <div id="players-list" class="players-list">
+            <!-- Players populated dynamically -->
+          </div>
+          <button id="start-game-btn" class="btn btn-primary" style="display: none;">
+            Start Game
+          </button>
+        </div>
+
+        <!-- Spectators Panel -->
+        <div class="panel spectators-panel">
+          <h3>Spectators (<span id="spectator-count">0</span>)</h3>
+          <div id="spectators-list" class="spectators-list">
+            <!-- Spectators populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Chat Panel -->
+        <div class="panel chat-panel">
+          <h3>Chat</h3>
+          <div id="chat-messages" class="chat-messages"></div>
+          <div class="chat-input">
+            <input type="text" id="chat-input" placeholder="Type message..." maxlength="200">
+            <button id="chat-send" class="btn btn-small">Send</button>
+          </div>
+        </div>
+
+        <!-- Game Controls -->
+        <div class="game-controls">
+          <button id="leave-room-btn" class="btn btn-secondary">Leave Room</button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal: Create Room -->
+  <div id="create-room-modal" class="modal">
+    <div class="modal-content">
+      <h2>Create Uno Room</h2>
+      <form id="create-room-form">
+
+        <div class="form-group">
+          <label for="room-name-input">Room Name</label>
+          <input type="text" id="room-name-input" class="form-input" required maxlength="50">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="max-players-input">Max Players</label>
+            <input type="number" id="max-players-input" class="form-input" min="2" max="10" value="4">
+          </div>
+
+          <div class="form-group">
+            <label for="turn-timer-input">Turn Timer (sec)</label>
+            <input type="number" id="turn-timer-input" class="form-input" min="0" max="300" value="30">
+            <small>0 = no limit</small>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>House Rules</h3>
+
+          <label class="checkbox-label">
+            <input type="checkbox" id="draw-until-playable">
+            <span>Draw Until Playable</span>
+            <small>Keep drawing until you get a playable card</small>
+          </label>
+
+          <label class="checkbox-label">
+            <input type="checkbox" id="stacking-draw">
+            <span>Stack Draw Cards</span>
+            <small>Play Draw 2 on Draw 2 to pass penalty</small>
+          </label>
+
+          <label class="checkbox-label">
+            <input type="checkbox" id="jump-in">
+            <span>Allow Jump-In</span>
+            <small>Play identical card out of turn</small>
+          </label>
+
+          <label class="checkbox-label">
+            <input type="checkbox" id="seven-swap">
+            <span>Seven Swap</span>
+            <small>Playing 7 = swap hands with another player</small>
+          </label>
+
+          <label class="checkbox-label">
+            <input type="checkbox" id="zero-rotate">
+            <span>Zero Rotate</span>
+            <small>Playing 0 = all players pass hands</small>
+          </label>
+
+          <label class="checkbox-label">
+            <input type="checkbox" id="forced-play">
+            <span>Forced Play</span>
+            <small>Must play if you have a playable card</small>
+          </label>
+
+          <label class="checkbox-label">
+            <input type="checkbox" id="challenge-wild" checked>
+            <span>Allow Wild +4 Challenge</span>
+            <small>Challenge if opponent had playable card</small>
+          </label>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Create Room</button>
+          <button type="button" id="cancel-create-room" class="btn btn-secondary">Cancel</button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Choose Wild Color -->
+  <div id="color-picker-modal" class="modal">
+    <div class="modal-content color-picker">
+      <h2>Choose Color</h2>
+      <div class="color-buttons">
+        <button class="color-btn red" data-color="red">
+          <span class="color-name">Red</span>
+        </button>
+        <button class="color-btn yellow" data-color="yellow">
+          <span class="color-name">Yellow</span>
+        </button>
+        <button class="color-btn green" data-color="green">
+          <span class="color-name">Green</span>
+        </button>
+        <button class="color-btn blue" data-color="blue">
+          <span class="color-name">Blue</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Winner Announcement -->
+  <div id="winner-modal" class="modal">
+    <div class="modal-content winner-content">
+      <h2>🎉 Game Over! 🎉</h2>
+      <div id="winner-info">
+        <!-- Winner info populated dynamically -->
+      </div>
+      <div class="winner-actions">
+        <button id="close-winner-modal" class="btn btn-primary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="notification-toast" class="notification-toast">
+    <span id="notification-text"></span>
+  </div>
+
+  <script src="/game/game.js"></script>
+</body>
+</html>
