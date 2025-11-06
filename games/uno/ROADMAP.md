@@ -394,6 +394,9 @@ module.exports = {
 - ✅ Notification toasts
 - ✅ UNO call/catch system
 - ✅ Responsive design
+- ✅ Turn timer with visual countdown
+- ✅ Card highlighting (playable/non-playable)
+- ✅ Real-time state synchronization
 
 ### 3.1 HTML Structure (`index.html`)
 
@@ -839,7 +842,7 @@ function renderCard(card) {
 
 ---
 
-## Phase 5: Testing & Refinement (Day 8, 4-6 hours) 🚧 IN PROGRESS
+## Phase 5: Testing & Refinement (Day 8, 4-6 hours) ✅ COMPLETE
 
 **Server Status:** ✅ Running on http://localhost:3000
 **Active Game:** ✅ Uno loaded successfully
@@ -855,79 +858,93 @@ function renderCard(card) {
 2. **Testing Checklist (Basic):**
 
 ### 5.1 Core Functionality Testing
-- [ ] Create room with various settings
-- [ ] Join as 2nd, 3rd, 4th player
-- [ ] Start game with 2 players
-- [ ] Play full game to completion
-- [ ] Test all card types:
-  - [ ] Number cards
-  - [ ] Skip cards
-  - [ ] Reverse cards
-  - [ ] Draw Two cards
-  - [ ] Wild cards
-  - [ ] Wild Draw Four cards
-- [ ] Test UNO call (correct and missed)
-- [ ] Test win condition
-- [ ] Test rematch functionality
+- ✅ Create room with various settings
+- ✅ Join as 2nd, 3rd, 4th player
+- ✅ Start game with 2 players
+- ✅ Play full game to completion
+- ✅ Test all card types:
+  - ✅ Number cards
+  - ✅ Skip cards
+  - ✅ Reverse cards
+  - ✅ Draw Two cards
+  - ✅ Wild cards
+  - ✅ Wild Draw Four cards
+- ✅ Test UNO call (correct and missed)
+- ✅ Test win condition
+- [ ] Test rematch functionality (Phase 6)
 
 ### 5.2 Edge Case Testing
-- [ ] Deck reshuffling when draw pile empty
-- [ ] Multiple Draw 2 stacking (if enabled)
-- [ ] Reverse with 2 players (acts as skip)
-- [ ] Wild Draw Four challenge (if enabled)
-- [ ] Jump-In rule (if enabled)
-- [ ] Seven swap hands (if enabled)
-- [ ] Zero rotate hands (if enabled)
-- [ ] Turn timer expiration
-- [ ] Player disconnect during game
-- [ ] Player reconnect to ongoing game
-- [ ] Host leaves room
-- [ ] Last player leaves (room cleanup)
+- ✅ Deck reshuffling when draw pile empty
+- ✅ Multiple Draw 2 stacking (foundation implemented)
+- ✅ Reverse with 2 players (acts as skip)
+- [ ] Wild Draw Four challenge (Phase 6 - advanced feature)
+- [ ] Jump-In rule (Phase 6 - advanced feature)
+- [ ] Seven swap hands (Phase 6 - advanced feature)
+- [ ] Zero rotate hands (Phase 6 - advanced feature)
+- ✅ Turn timer expiration (auto-draw implemented)
+- ✅ Player disconnect during game
+- ✅ Player reconnect to ongoing game
+- ✅ Host leaves room
+- ✅ Last player leaves (room cleanup)
 
 ### 5.3 Spectator Testing
-- [ ] Join as spectator
-- [ ] View game state (all except player hands)
-- [ ] Participate in chat
-- [ ] Switch from spectator to player
-- [ ] Spectator sees all game events
+- ✅ Join as spectator
+- ✅ View game state (all except player hands)
+- ✅ Participate in chat
+- ✅ Switch from spectator to player
+- ✅ Spectator sees all game events
 
 ### 5.4 Chat Testing
-- [ ] Send messages as player
-- [ ] Send messages as spectator
-- [ ] Chat history preserved on rejoin
-- [ ] XSS protection (HTML escaping)
-- [ ] 50-message limit enforced
+- ✅ Send messages as player
+- ✅ Send messages as spectator
+- ✅ Chat history preserved on rejoin
+- ✅ XSS protection (HTML escaping)
+- ✅ 50-message limit enforced
 
 ### 5.5 Multi-Room Testing
-- [ ] Create 3+ simultaneous rooms
-- [ ] Players in different rooms don't see each other's events
-- [ ] Chat is room-scoped
-- [ ] Switching between rooms works correctly
+- ✅ Create 3+ simultaneous rooms
+- ✅ Players in different rooms don't see each other's events
+- ✅ Chat is room-scoped
+- ✅ Switching between rooms works correctly
 
 ### 5.6 Stats Integration Testing
-- [ ] Wins recorded to stats API
-- [ ] Games played incremented
-- [ ] Leaderboard updates correctly
-- [ ] Stats persist across sessions
+- ✅ Wins recorded to stats API
+- ✅ Games played incremented
+- ✅ Leaderboard updates correctly
+- ✅ Stats persist across sessions
 
 ### 5.7 Admin Panel Testing
-- [ ] Settings.json loads correctly
-- [ ] Live stats update (room count, player count)
-- [ ] Changing default settings reflects in new rooms
-- [ ] Admin can monitor active games
+- ✅ Settings.json loads correctly
+- ✅ Live stats update (room count, player count)
+- ✅ Changing default settings reflects in new rooms
+- ✅ Admin can monitor active games
 
 ### 5.8 Performance Testing
-- [ ] 10 players in one room
-- [ ] Multiple rooms with spectators
-- [ ] Rapid card plays
-- [ ] Chat spam handling
-- [ ] Memory leaks (long-running rooms)
+- ✅ 10 players in one room (tested)
+- ✅ Multiple rooms with spectators
+- ✅ Rapid card plays
+- ✅ Chat spam handling
+- ✅ Memory leaks (long-running rooms)
 
 ### 5.9 Cross-Browser Testing
-- [ ] Chrome/Edge (primary)
-- [ ] Firefox
-- [ ] Safari (if available)
-- [ ] Mobile browsers (bonus)
+- ✅ Chrome/Edge (primary)
+- [ ] Firefox (Phase 6)
+- [ ] Safari (Phase 6)
+- [ ] Mobile browsers (Phase 6)
+
+### 5.10 Bug Fixes Completed
+- ✅ Fixed asset path resolution (CSS/JS 404 errors)
+- ✅ Fixed user profile loading (async initialization)
+- ✅ Fixed room settings not applying (boolean handling)
+- ✅ Fixed draw penalty targeting wrong players (null checks)
+- ✅ Fixed card highlighting not updating (state sync)
+- ✅ Fixed UNO badge not clearing on draw
+- ✅ Implemented catch UNO functionality
+- ✅ Fixed starting player unable to play cards
+- ✅ Reworked "Draw Until Playable" to be incremental
+- ✅ Added visual dimming for non-playable cards
+- ✅ Migrated from bcrypt to bcryptjs
+- ✅ Updated all npm dependencies to latest stable versions
 
 ---
 
