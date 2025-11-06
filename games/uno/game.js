@@ -500,28 +500,76 @@ function isCardPlayable(card) {
 function handleCardPlayed(data) {
   if (!currentRoom) return;
 
-  // Update room state
-  currentRoom.topCard = data.card;
-  currentRoom.currentColor = data.currentColor;
-
-  // Remove card from hand if it was mine
+  // If it's my card, animate it to discard pile
   if (data.user.id === myUserId) {
-    myHand = myHand.filter(c => c.id !== data.card.id);
-    // Remove from existing cards tracking
-    existingCardIds.delete(data.card.id);
-  } else {
-    // Update opponent card count
-    if (currentRoom.handSizes) {
-      currentRoom.handSizes[data.user.id] = data.handSize;
+    const cardEl = document.querySelector(`[data-card-id="${data.card.id}"]`);
+    if (cardEl) {
+      animateCardPlay(cardEl, data.card, () => {
+        // Update room state after animation
+        currentRoom.topCard = data.card;
+        currentRoom.currentColor = data.currentColor;
+
+        // Remove card from hand
+        myHand = myHand.filter(c => c.id !== data.card.id);
+        existingCardIds.delete(data.card.id);
+
+        renderGameBoard();
+        renderOpponents();
+        renderPlayerHand();
+      });
+    } else {
+      // Fallback if card element not found
+      currentRoom.topCard = data.card;
+      currentRoom.currentColor = data.currentColor;
+      myHand = myHand.filter(c => c.id !== data.card.id);
+      existingCardIds.delete(data.card.id);
+      renderGameBoard();
+      renderOpponents();
+      renderPlayerHand();
     }
-  }
+  } else {
+    // For opponent cards, animate from their position
+    const opponentEl = document.querySelector(`[data-user-id="${data.user.id}"]`);
+    if (opponentEl) {
+      // Create a temporary card at opponent position
+      const opponentRect = opponentEl.getBoundingClientRect();
+      const tempCard = document.createElement('div');
+      tempCard.className = 'card card-back';
+      tempCard.innerHTML = '<span class="card-text">UNO</span>';
+      tempCard.style.position = 'fixed';
+      tempCard.style.left = `${opponentRect.left + opponentRect.width / 2 - 50}px`;
+      tempCard.style.top = `${opponentRect.top + opponentRect.height / 2 - 70}px`;
+      tempCard.style.width = '100px';
+      tempCard.style.height = '140px';
+      document.body.appendChild(tempCard);
 
-  renderGameBoard();
-  renderOpponents();
-  renderPlayerHand(); // Re-render to update playable highlights
+      // Use the card element for animation
+      animateCardPlay(tempCard, data.card, () => {
+        // Update room state after animation
+        currentRoom.topCard = data.card;
+        currentRoom.currentColor = data.currentColor;
 
-  const cardName = getCardName(data.card);
-  if (data.user.id !== myUserId) {
+        if (currentRoom.handSizes) {
+          currentRoom.handSizes[data.user.id] = data.handSize;
+        }
+
+        renderGameBoard();
+        renderOpponents();
+        renderPlayerHand();
+      });
+    } else {
+      // Fallback
+      currentRoom.topCard = data.card;
+      currentRoom.currentColor = data.currentColor;
+      if (currentRoom.handSizes) {
+        currentRoom.handSizes[data.user.id] = data.handSize;
+      }
+      renderGameBoard();
+      renderOpponents();
+      renderPlayerHand();
+    }
+
+    const cardName = getCardName(data.card);
     showNotification(`${data.user.nickname} played ${cardName}`, 'info');
   }
 }
@@ -631,6 +679,63 @@ function animateCardDraw(targetElement, cardCount = 1, callback) {
       }, 700);
     }, i * 100); // Stagger multiple cards
   }
+}
+
+/**
+ * Animate card from source to discard pile
+ */
+function animateCardPlay(cardElement, card, callback) {
+  const discardPile = document.getElementById('discard-pile');
+  const cardRect = cardElement.getBoundingClientRect();
+  const discardRect = discardPile.getBoundingClientRect();
+
+  // Create temporary card element for animation
+  const tempCard = document.createElement('div');
+  tempCard.className = `card ${card.color}`;
+
+  // Add card content
+  const cornerValue = card.type === 'number' ? card.value : getCardIcon(card.type);
+  const cornerDiv = document.createElement('div');
+  cornerDiv.className = 'card-corner';
+  cornerDiv.textContent = cornerValue;
+
+  if (card.type === 'number') {
+    tempCard.innerHTML = `<span class="card-number">${card.value}</span>`;
+  } else {
+    const icon = getCardIcon(card.type);
+    tempCard.innerHTML = `<span class="card-icon">${icon}</span>`;
+  }
+  tempCard.insertBefore(cornerDiv, tempCard.firstChild);
+
+  // Position at card location
+  tempCard.style.position = 'fixed';
+  tempCard.style.left = `${cardRect.left}px`;
+  tempCard.style.top = `${cardRect.top}px`;
+  tempCard.style.width = '100px';
+  tempCard.style.height = '140px';
+  tempCard.style.zIndex = '10000';
+  tempCard.style.pointerEvents = 'none';
+  tempCard.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+
+  document.body.appendChild(tempCard);
+
+  // Hide original card immediately
+  cardElement.style.opacity = '0';
+
+  // Animate to discard pile after a brief delay
+  setTimeout(() => {
+    tempCard.style.left = `${discardRect.left}px`;
+    tempCard.style.top = `${discardRect.top}px`;
+    tempCard.style.transform = 'rotate(360deg)';
+  }, 50);
+
+  // Remove after animation and trigger callback
+  setTimeout(() => {
+    tempCard.remove();
+    if (callback) {
+      callback();
+    }
+  }, 700);
 }
 
 /**

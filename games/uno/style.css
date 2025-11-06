@@ -738,11 +738,11 @@ body::before {
 @keyframes card-enter {
   from {
     opacity: 0;
-    transform: translateY(20px) scale(0.8);
+    scale: 0.8;
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    scale: 1;
   }
 }
 
