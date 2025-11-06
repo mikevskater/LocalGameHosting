@@ -496,6 +496,17 @@ body {
   box-shadow: 0 0 30px rgba(255, 235, 59, 1);
 }
 
+.card.not-playable {
+  opacity: 0.4;
+  filter: grayscale(50%);
+  cursor: not-allowed;
+}
+
+.card.not-playable:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
 /* ============================================================================
    SIDEBAR PANELS
    ============================================================================ */

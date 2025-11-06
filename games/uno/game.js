@@ -575,7 +575,14 @@ function handleCardsDrawn(data) {
   });
 
   renderPlayerHand();
-  showNotification(`You drew ${data.cards.length} card(s)`, 'info');
+
+  // Show appropriate notification based on draw result
+  if (data.mustDrawMore) {
+    showNotification(`Drew 1 card (not playable) - Draw again!`, 'warning');
+  } else if (data.isPlayable) {
+    showNotification(`Drew 1 playable card - You can play it or pass`, 'success');
+  } else {
+    showNotification(`You drew ${data.cards.length} card(s)`, 'info');
   }
 }
 
@@ -1077,9 +1084,13 @@ function renderPlayerHand() {
     const cardEl = createCardElement(card, true);
     cardEl.addEventListener('click', () => handleCardClick(card.id));
 
-    // Highlight playable cards
-    if (currentRoom && currentRoom.currentPlayer === myUserId && isCardPlayable(card)) {
-      cardEl.classList.add('playable');
+    // Highlight playable cards or dim non-playable cards
+    if (currentRoom && currentRoom.currentPlayer === myUserId) {
+      if (isCardPlayable(card)) {
+        cardEl.classList.add('playable');
+      } else {
+        cardEl.classList.add('not-playable');
+      }
     }
 
     container.appendChild(cardEl);
