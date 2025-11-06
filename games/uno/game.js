@@ -549,24 +549,87 @@ function handleDrawCard() {
 function handleCardDrawn(data) {
   if (!currentRoom) return;
 
-  // Update hand sizes
-  if (currentRoom.handSizes) {
-    currentRoom.handSizes[data.userId] = data.handSize;
-  }
-
-  // Update UNO called status
-  if (currentRoom.unoCalled && data.unoCalled !== undefined) {
-    currentRoom.unoCalled[data.userId] = data.unoCalled;
-  }
-
-  renderPlayers();
-  renderOpponents();
-
+  // Animate cards to opponent's hand if not the current player
   if (data.userId !== myUserId) {
+    const opponentEl = document.querySelector(`[data-user-id="${data.userId}"]`);
+    if (opponentEl) {
+      animateCardDraw(opponentEl, data.cardCount, () => {
+        // Update hand sizes after animation
+        if (currentRoom.handSizes) {
+          currentRoom.handSizes[data.userId] = data.handSize;
+        }
+
+        // Update UNO called status
+        if (currentRoom.unoCalled && data.unoCalled !== undefined) {
+          currentRoom.unoCalled[data.userId] = data.unoCalled;
+        }
+
+        renderPlayers();
+        renderOpponents();
+      });
+    }
+
     const message = data.penalty ?
       `${data.user.nickname} drew ${data.cardCount} cards (penalty)` :
       `${data.user.nickname} drew ${data.cardCount} card(s)`;
     showNotification(message, 'info');
+  } else {
+    // Update for current player (no animation needed - already handled in handleCardsDrawn)
+    if (currentRoom.handSizes) {
+      currentRoom.handSizes[data.userId] = data.handSize;
+    }
+
+    if (currentRoom.unoCalled && data.unoCalled !== undefined) {
+      currentRoom.unoCalled[data.userId] = data.unoCalled;
+    }
+
+    renderPlayers();
+  }
+}
+
+/**
+ * Animate card(s) from draw pile to target location
+ */
+function animateCardDraw(targetElement, cardCount = 1, callback) {
+  const drawPile = document.getElementById('draw-pile');
+  const drawPileRect = drawPile.getBoundingClientRect();
+  const targetRect = targetElement.getBoundingClientRect();
+
+  // Create temporary card elements for animation
+  for (let i = 0; i < cardCount; i++) {
+    setTimeout(() => {
+      const tempCard = document.createElement('div');
+      tempCard.className = 'card card-back animating-card';
+      tempCard.innerHTML = '<span class="card-text">UNO</span>';
+
+      // Position at draw pile
+      tempCard.style.position = 'fixed';
+      tempCard.style.left = `${drawPileRect.left}px`;
+      tempCard.style.top = `${drawPileRect.top}px`;
+      tempCard.style.width = '100px';
+      tempCard.style.height = '140px';
+      tempCard.style.zIndex = '10000';
+      tempCard.style.pointerEvents = 'none';
+      tempCard.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+
+      document.body.appendChild(tempCard);
+
+      // Animate to target after a brief delay
+      setTimeout(() => {
+        tempCard.style.left = `${targetRect.left + targetRect.width / 2 - 50}px`;
+        tempCard.style.top = `${targetRect.top + targetRect.height / 2 - 70}px`;
+        tempCard.style.transform = 'scale(0.8) rotate(360deg)';
+        tempCard.style.opacity = '0';
+      }, 50);
+
+      // Remove after animation and trigger callback on last card
+      setTimeout(() => {
+        tempCard.remove();
+        if (i === cardCount - 1 && callback) {
+          callback();
+        }
+      }, 700);
+    }, i * 100); // Stagger multiple cards
   }
 }
 
@@ -574,21 +637,26 @@ function handleCardDrawn(data) {
  * Handle cards drawn (private event - my cards)
  */
 function handleCardsDrawn(data) {
-  // Add cards to my hand
-  data.cards.forEach(card => {
-    myHand.push(card);
+  const playerHand = document.getElementById('player-hand');
+
+  // Animate cards from draw pile to hand
+  animateCardDraw(playerHand, data.cards.length, () => {
+    // Add cards to my hand after animation
+    data.cards.forEach(card => {
+      myHand.push(card);
+    });
+
+    renderPlayerHand();
+
+    // Show appropriate notification based on draw result
+    if (data.mustDrawMore) {
+      showNotification(`Drew 1 card (not playable) - Draw again!`, 'warning');
+    } else if (data.isPlayable) {
+      showNotification(`Drew 1 playable card - You can play it or pass`, 'success');
+    } else {
+      showNotification(`You drew ${data.cards.length} card(s)`, 'info');
+    }
   });
-
-  renderPlayerHand();
-
-  // Show appropriate notification based on draw result
-  if (data.mustDrawMore) {
-    showNotification(`Drew 1 card (not playable) - Draw again!`, 'warning');
-  } else if (data.isPlayable) {
-    showNotification(`Drew 1 playable card - You can play it or pass`, 'success');
-  } else {
-    showNotification(`You drew ${data.cards.length} card(s)`, 'info');
-  }
 }
 
 // ============================================================================
@@ -1057,6 +1125,7 @@ function renderOpponents() {
 
     const oppDiv = document.createElement('div');
     oppDiv.className = `opponent ${isCurrent ? 'current-turn' : ''}`;
+    oppDiv.dataset.userId = player.id; // For animation targeting
 
     oppDiv.innerHTML = `
       <div class="opponent-info">
@@ -1112,23 +1181,71 @@ function sortHand(hand) {
 }
 
 /**
- * Render player's hand
+ * Calculate arc positioning for cards (Balatro-style)
+ */
+function calculateArcPosition(index, total, containerWidth) {
+  const maxSpread = 800; // Maximum width the hand can spread
+  const cardWidth = 100;
+  const maxAngle = 25; // Maximum rotation angle in degrees
+
+  // Calculate spacing - cards overlap more when there are many
+  const availableWidth = Math.min(maxSpread, containerWidth - 100);
+  const cardSpacing = Math.min(cardWidth * 0.7, availableWidth / Math.max(total - 1, 1));
+
+  // Calculate total width of hand
+  const totalWidth = (total - 1) * cardSpacing;
+
+  // Calculate position from center
+  const centerOffset = (index - (total - 1) / 2) * cardSpacing;
+
+  // Calculate rotation angle based on position
+  const normalizedPos = total > 1 ? (index / (total - 1)) - 0.5 : 0; // -0.5 to 0.5
+  const rotation = normalizedPos * maxAngle * (total > 5 ? 1.2 : 1); // Increase curve for more cards
+
+  // Calculate Y offset for arc (cards at edges lift slightly)
+  const arcHeight = Math.abs(normalizedPos) * 20;
+
+  return {
+    x: centerOffset,
+    rotation: rotation,
+    y: arcHeight,
+    zIndex: index
+  };
+}
+
+/**
+ * Setup click handler for a card
+ */
+function setupCardDrag(cardEl, card) {
+  // Click handler for playing cards
+  cardEl.addEventListener('click', () => {
+    handleCardClick(card.id);
+  });
+}
+
+/**
+ * Render player's hand with arc layout
  */
 function renderPlayerHand() {
   const container = document.getElementById('player-hand');
-
-  // Track current card IDs before clearing
-  const currentCardIds = new Set(Array.from(container.children).map(el => el.dataset.cardId));
+  const containerWidth = container.offsetWidth || 1000;
 
   container.innerHTML = '';
 
   // Sort hand based on current mode
   const sortedHand = sortHand(myHand);
 
-  sortedHand.forEach(card => {
+  sortedHand.forEach((card, index) => {
     const cardEl = createCardElement(card, true);
     cardEl.dataset.cardId = card.id;
-    cardEl.addEventListener('click', () => handleCardClick(card.id));
+    cardEl.dataset.cardIndex = index;
+
+    // Calculate arc position
+    const pos = calculateArcPosition(index, sortedHand.length, containerWidth);
+
+    // Apply positioning
+    cardEl.style.transform = `translateX(${pos.x}px) translateY(-${pos.y}px) rotate(${pos.rotation}deg)`;
+    cardEl.style.zIndex = pos.zIndex;
 
     // Only add entering animation for NEW cards
     const isNewCard = !existingCardIds.has(card.id);
@@ -1145,6 +1262,9 @@ function renderPlayerHand() {
         cardEl.classList.add('not-playable');
       }
     }
+
+    // Add drag handlers
+    setupCardDrag(cardEl, card);
 
     container.appendChild(cardEl);
   });
@@ -1174,12 +1294,22 @@ function createCardElement(card, interactive = false) {
     cardDiv.classList.add('interactive');
   }
 
+  // Create corner indicator for stacked card visibility
+  const cornerValue = card.type === 'number' ? card.value : getCardIcon(card.type);
+  const cornerDiv = document.createElement('div');
+  cornerDiv.className = 'card-corner';
+  cornerDiv.textContent = cornerValue;
+
+  // Main card content
   if (card.type === 'number') {
     cardDiv.innerHTML = `<span class="card-number">${card.value}</span>`;
   } else {
     const icon = getCardIcon(card.type);
     cardDiv.innerHTML = `<span class="card-icon">${icon}</span>`;
   }
+
+  // Add corner indicator
+  cardDiv.insertBefore(cornerDiv, cardDiv.firstChild);
 
   return cardDiv;
 }

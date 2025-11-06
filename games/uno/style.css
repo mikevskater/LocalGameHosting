@@ -504,32 +504,29 @@ body::before {
 }
 
 .player-hand {
+  position: relative;
   display: flex;
-  gap: -20px;
   justify-content: center;
   align-items: flex-end;
-  min-height: 160px;
-  perspective: 1000px;
-  padding: 10px 0;
+  min-height: 200px;
+  perspective: 1200px;
+  padding: 20px 0;
 }
 
-/* Card fan effect in player hand */
+/* Card fan effect with arc layout - cards positioned via JS */
 .player-hand .card {
-  margin: 0 -10px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.player-hand .card:nth-child(odd) {
-  transform: rotate(-2deg);
-}
-
-.player-hand .card:nth-child(even) {
-  transform: rotate(2deg);
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform-origin: center 400px; /* Arc radius - cards rotate around this point */
+  cursor: pointer;
+  transition: bottom 0.2s ease, filter 0.2s ease, transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .player-hand .card:hover {
-  margin: 0 20px;
-  z-index: 100;
+  bottom: 40px !important;
+  z-index: 100 !important;
+  filter: brightness(1.1);
 }
 
 .player-actions {
@@ -579,6 +576,33 @@ body::before {
     rgba(0, 0, 0, 0.1) 100%
   );
   pointer-events: none;
+}
+
+/* Card corner indicator (for stacked visibility) */
+.card-corner {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: white;
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 1px 2px rgba(0, 0, 0, 0.8);
+  z-index: 10;
+  line-height: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.card-corner-value {
+  font-size: 1.3rem;
+}
+
+.card-corner-icon {
+  font-size: 0.9rem;
 }
 
 .card.small {
