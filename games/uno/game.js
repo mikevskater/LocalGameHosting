@@ -13,6 +13,8 @@ let myHand = [];
 let pendingWildCard = null; // Card waiting for color selection
 let turnTimerInterval = null; // Countdown interval
 let turnEndTime = null; // When the current turn ends
+let cardSortMode = 'color'; // 'color' or 'number'
+let existingCardIds = new Set(); // Track which cards are already in hand (prevent re-animation)
 
 // ============================================================================
 // INITIALIZATION
@@ -66,6 +68,7 @@ function setupEventListeners() {
 
   // Game Actions
   document.getElementById('draw-btn').addEventListener('click', handleDrawCard);
+  document.getElementById('sort-btn').addEventListener('click', toggleSortMode);
   document.getElementById('uno-btn').addEventListener('click', handleCallUno);
   document.getElementById('start-game-btn').addEventListener('click', handleStartGame);
   document.getElementById('leave-room-btn').addEventListener('click', handleLeaveRoom);
@@ -504,6 +507,8 @@ function handleCardPlayed(data) {
   // Remove card from hand if it was mine
   if (data.user.id === myUserId) {
     myHand = myHand.filter(c => c.id !== data.card.id);
+    // Remove from existing cards tracking
+    existingCardIds.delete(data.card.id);
   } else {
     // Update opponent card count
     if (currentRoom.handSizes) {
@@ -1074,15 +1079,63 @@ function renderOpponents() {
 }
 
 /**
+ * Sort hand based on current sort mode
+ */
+function sortHand(hand) {
+  const colorOrder = { red: 0, yellow: 1, green: 2, blue: 3, wild: 4 };
+  const typeOrder = { number: 0, skip: 1, reverse: 2, draw2: 3, wild: 4, 'wild-draw4': 5 };
+
+  return [...hand].sort((a, b) => {
+    if (cardSortMode === 'color') {
+      // Sort by color first, then by type, then by value
+      if (colorOrder[a.color] !== colorOrder[b.color]) {
+        return colorOrder[a.color] - colorOrder[b.color];
+      }
+      if (typeOrder[a.type] !== typeOrder[b.type]) {
+        return typeOrder[a.type] - typeOrder[b.type];
+      }
+      return (a.value || 0) - (b.value || 0);
+    } else {
+      // Sort by number/type first, then by color
+      if (a.type === 'number' && b.type === 'number') {
+        if (a.value !== b.value) {
+          return a.value - b.value;
+        }
+        return colorOrder[a.color] - colorOrder[b.color];
+      }
+      if (typeOrder[a.type] !== typeOrder[b.type]) {
+        return typeOrder[a.type] - typeOrder[b.type];
+      }
+      return colorOrder[a.color] - colorOrder[b.color];
+    }
+  });
+}
+
+/**
  * Render player's hand
  */
 function renderPlayerHand() {
   const container = document.getElementById('player-hand');
+
+  // Track current card IDs before clearing
+  const currentCardIds = new Set(Array.from(container.children).map(el => el.dataset.cardId));
+
   container.innerHTML = '';
 
-  myHand.forEach(card => {
+  // Sort hand based on current mode
+  const sortedHand = sortHand(myHand);
+
+  sortedHand.forEach(card => {
     const cardEl = createCardElement(card, true);
+    cardEl.dataset.cardId = card.id;
     cardEl.addEventListener('click', () => handleCardClick(card.id));
+
+    // Only add entering animation for NEW cards
+    const isNewCard = !existingCardIds.has(card.id);
+    if (isNewCard) {
+      cardEl.classList.add('entering');
+      existingCardIds.add(card.id);
+    }
 
     // Highlight playable cards or dim non-playable cards
     if (currentRoom && currentRoom.currentPlayer === myUserId) {
@@ -1099,6 +1152,16 @@ function renderPlayerHand() {
   // Update UNO button
   const unoBtn = document.getElementById('uno-btn');
   unoBtn.disabled = myHand.length !== 1 || (currentRoom && currentRoom.unoCalled && currentRoom.unoCalled[myUserId]);
+}
+
+/**
+ * Toggle sort mode between color and number
+ */
+function toggleSortMode() {
+  cardSortMode = cardSortMode === 'color' ? 'number' : 'color';
+  document.getElementById('sort-mode-text').textContent =
+    cardSortMode === 'color' ? 'Color' : 'Number';
+  renderPlayerHand();
 }
 
 /**

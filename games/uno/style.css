@@ -15,10 +15,26 @@
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1a1c2e 0%, #2d1b4e 50%, #1a1c2e 100%);
+  background-attachment: fixed;
   color: #333;
   min-height: 100vh;
   overflow: hidden;
+}
+
+/* Animated background pattern */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(162, 89, 255, 0.05) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* ============================================================================
@@ -173,25 +189,70 @@ body {
 
 .opponents-area {
   display: flex;
-  gap: 15px;
+  gap: 20px;
   justify-content: center;
   flex-wrap: wrap;
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  min-height: 120px;
+  padding: 20px;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.2) 0%,
+    rgba(0, 0, 0, 0.1) 100%
+  );
+  border-radius: 16px;
+  min-height: 140px;
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.2),
+    0 4px 8px rgba(0, 0, 0, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.05);
 }
 
 .opponent {
-  padding: 10px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.15);
-  min-width: 150px;
+  padding: 15px;
+  border-radius: 12px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.08) 100%
+  );
+  min-width: 160px;
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.opponent:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
 }
 
 .opponent.current-turn {
-  background: rgba(255, 235, 59, 0.3);
-  box-shadow: 0 0 12px rgba(255, 235, 59, 0.6);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 235, 59, 0.4) 0%,
+    rgba(255, 193, 7, 0.3) 100%
+  );
+  border-color: rgba(255, 235, 59, 0.6);
+  box-shadow:
+    0 0 20px rgba(255, 235, 59, 0.6),
+    0 0 40px rgba(255, 235, 59, 0.3),
+    0 4px 8px rgba(0, 0, 0, 0.2);
+  animation: current-turn-pulse 2s ease-in-out infinite;
+}
+
+@keyframes current-turn-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 20px rgba(255, 235, 59, 0.6),
+      0 0 40px rgba(255, 235, 59, 0.3),
+      0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 30px rgba(255, 235, 59, 0.8),
+      0 0 60px rgba(255, 235, 59, 0.4),
+      0 4px 8px rgba(0, 0, 0, 0.2);
+  }
 }
 
 .opponent-info {
@@ -236,26 +297,85 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 40px;
+  gap: 60px;
   position: relative;
+  padding: 40px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.02) 50%,
+    transparent 100%
+  );
+  border-radius: 20px;
 }
 
 .draw-pile,
 .discard-pile {
   position: relative;
+  transition: transform 0.3s ease;
+}
+
+.draw-pile:hover {
+  transform: scale(1.05);
+}
+
+.draw-pile::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  border-radius: 18px;
+  background: radial-gradient(
+    circle at center,
+    rgba(66, 165, 245, 0.2) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.draw-pile:hover::after {
+  opacity: 1;
+}
+
+.discard-pile::after {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  right: -8px;
+  bottom: -8px;
+  border-radius: 20px;
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 193, 7, 0.15) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  animation: discard-glow 3s ease-in-out infinite;
+}
+
+@keyframes discard-glow {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.05); }
 }
 
 .pile-count {
   position: absolute;
-  bottom: -25px;
+  bottom: -30px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.7);
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.7));
   color: #fff;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 0.9rem;
-  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.1);
 }
 
 .draw-pile .card {
@@ -367,20 +487,49 @@ body {
    ============================================================================ */
 
 .player-hand-area {
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
+  padding: 25px;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.15) 0%,
+    rgba(0, 0, 0, 0.25) 100%
+  );
+  border-radius: 20px;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 20px;
+  box-shadow:
+    inset 0 2px 8px rgba(0, 0, 0, 0.3),
+    0 -4px 12px rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.05);
 }
 
 .player-hand {
   display: flex;
-  gap: 10px;
+  gap: -20px;
   justify-content: center;
-  flex-wrap: wrap;
+  align-items: flex-end;
   min-height: 160px;
+  perspective: 1000px;
+  padding: 10px 0;
+}
+
+/* Card fan effect in player hand */
+.player-hand .card {
+  margin: 0 -10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.player-hand .card:nth-child(odd) {
+  transform: rotate(-2deg);
+}
+
+.player-hand .card:nth-child(even) {
+  transform: rotate(2deg);
+}
+
+.player-hand .card:hover {
+  margin: 0 20px;
+  z-index: 100;
 }
 
 .player-actions {
@@ -396,17 +545,40 @@ body {
 .card {
   width: 100px;
   height: 140px;
-  border-radius: 12px;
-  border: 3px solid #333;
+  border-radius: 14px;
+  border: 4px solid rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   position: relative;
   background: white;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow:
+    0 8px 16px rgba(0, 0, 0, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
+  cursor: pointer;
+  transform-style: preserve-3d;
+}
+
+/* Card shine effect */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 10px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.4) 0%,
+    transparent 50%,
+    rgba(0, 0, 0, 0.1) 100%
+  );
+  pointer-events: none;
 }
 
 .card.small {
@@ -482,29 +654,176 @@ body {
 }
 
 .card.interactive:hover {
-  transform: translateY(-15px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  transform: translateY(-20px) scale(1.05);
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.4),
+    0 4px 8px rgba(0, 0, 0, 0.3);
+  z-index: 10;
 }
 
 .card.playable {
   border-color: #ffeb3b;
-  box-shadow: 0 0 20px rgba(255, 235, 59, 0.8);
+  box-shadow:
+    0 0 25px rgba(255, 235, 59, 0.9),
+    0 0 50px rgba(255, 235, 59, 0.4),
+    0 8px 16px rgba(0, 0, 0, 0.3);
+  animation: playable-pulse 2s ease-in-out infinite;
+}
+
+@keyframes playable-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 25px rgba(255, 235, 59, 0.9),
+      0 0 50px rgba(255, 235, 59, 0.4),
+      0 8px 16px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 35px rgba(255, 235, 59, 1),
+      0 0 70px rgba(255, 235, 59, 0.6),
+      0 8px 16px rgba(0, 0, 0, 0.3);
+  }
 }
 
 .card.playable:hover {
+  transform: translateY(-25px) scale(1.1) rotate(-2deg);
   border-color: #ffc107;
-  box-shadow: 0 0 30px rgba(255, 235, 59, 1);
+  box-shadow:
+    0 0 40px rgba(255, 235, 59, 1),
+    0 0 80px rgba(255, 235, 59, 0.6),
+    0 12px 24px rgba(0, 0, 0, 0.4);
+  animation: none;
 }
 
 .card.not-playable {
-  opacity: 0.4;
-  filter: grayscale(50%);
+  opacity: 0.5;
+  filter: grayscale(60%) brightness(0.8);
   cursor: not-allowed;
 }
 
 .card.not-playable:hover {
-  transform: translateY(-5px);
+  transform: translateY(-3px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================================================
+   ANIMATIONS
+   ============================================================================ */
+
+/* Card entrance animation */
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Only animate cards when they first appear, not on re-renders */
+.card.entering {
+  animation: card-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Card play animation (to be triggered via JS) */
+@keyframes card-play {
+  0% {
+    transform: translateY(0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-100px) scale(1.2) rotate(10deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-200px) scale(0.5) rotate(20deg);
+    opacity: 0;
+  }
+}
+
+.card.playing {
+  animation: card-play 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Card draw animation (from deck) */
+@keyframes card-draw {
+  0% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(100px, -50px) scale(1.1) rotate(-15deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(200px, 100px) scale(0.8) rotate(-30deg);
+    opacity: 0;
+  }
+}
+
+.card.drawing {
+  animation: card-draw 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Shake animation for invalid action */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.shake {
+  animation: shake 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Slide in from bottom */
+@keyframes slide-in-bottom {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.player-hand-area {
+  animation: slide-in-bottom 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Slide in from top */
+@keyframes slide-in-top {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.opponents-area {
+  animation: slide-in-top 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Fade and scale in */
+@keyframes fade-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.game-board {
+  animation: fade-scale-in 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ============================================================================
@@ -686,35 +1005,71 @@ body {
    ============================================================================ */
 
 .btn {
-  padding: 10px 20px;
+  padding: 12px 24px;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn:hover::before {
+  width: 300px;
+  height: 300px;
 }
 
 .btn:hover:not(:disabled) {
-  transform: translateY(-2px);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.2),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2);
 }
 
 .btn:active:not(:disabled) {
-  transform: translateY(0);
+  transform: translateY(-1px) scale(0.98);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.15),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2);
 }
 
 .btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
+  filter: grayscale(50%);
+}
+
+.btn-icon {
+  font-size: 1.2em;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
 .btn-primary {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -722,8 +1077,9 @@ body {
 }
 
 .btn-secondary {
-  background: #9e9e9e;
+  background: linear-gradient(135deg, #78909c 0%, #546e7a 100%);
   color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .btn-secondary:hover:not(:disabled) {
@@ -741,31 +1097,73 @@ body {
 }
 
 .btn-draw {
-  background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+  background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
   color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 4px 12px rgba(76, 175, 80, 0.4),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2);
 }
 
 .btn-draw:hover:not(:disabled) {
-  background: linear-gradient(135deg, #388e3c 0%, #2e7d32 100%);
+  background: linear-gradient(135deg, #66bb6a 0%, #388e3c 100%);
+  box-shadow:
+    0 6px 16px rgba(76, 175, 80, 0.5),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2);
 }
 
 .btn-uno {
-  background: linear-gradient(135deg, #ff5252 0%, #ff1744 100%);
+  background: linear-gradient(135deg, #ff5252 0%, #d32f2f 100%);
   color: #fff;
-  animation: pulse 1.5s infinite;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  font-size: 1.1rem;
+  padding: 14px 28px;
+  box-shadow:
+    0 0 20px rgba(255, 23, 68, 0.6),
+    0 4px 12px rgba(255, 82, 82, 0.4),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.3);
+  animation: uno-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 .btn-uno:hover:not(:disabled) {
-  background: linear-gradient(135deg, #ff1744 0%, #d50000 100%);
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff1744 100%);
+  box-shadow:
+    0 0 30px rgba(255, 23, 68, 0.8),
+    0 6px 16px rgba(255, 82, 82, 0.5),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.3);
 }
 
-@keyframes pulse {
+@keyframes uno-pulse {
   0%, 100% {
-    box-shadow: 0 0 10px rgba(255, 23, 68, 0.5);
+    box-shadow:
+      0 0 20px rgba(255, 23, 68, 0.6),
+      0 4px 12px rgba(255, 82, 82, 0.4),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.3);
+    transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 20px rgba(255, 23, 68, 0.8);
+    box-shadow:
+      0 0 35px rgba(255, 23, 68, 0.9),
+      0 4px 12px rgba(255, 82, 82, 0.6),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.3);
+    transform: scale(1.05);
   }
+}
+
+.btn-sort {
+  background: linear-gradient(135deg, #42a5f5 0%, #1e88e5 100%);
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 4px 12px rgba(66, 165, 245, 0.4),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.btn-sort:hover {
+  background: linear-gradient(135deg, #64b5f6 0%, #2196f3 100%);
+  box-shadow:
+    0 6px 16px rgba(66, 165, 245, 0.5),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2);
 }
 
 .btn-icon {
