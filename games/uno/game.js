@@ -384,12 +384,28 @@ function handleGameStarted(data) {
 
   document.getElementById('start-game-btn').style.display = 'none';
 
+  // Update button states
+  const isMyTurn = currentRoom.currentPlayer === myUserId;
+  document.getElementById('draw-btn').disabled = !isMyTurn;
+
   renderGameBoard();
   renderPlayerHand();
   updateGameState();
+  highlightCurrentPlayer();
+
+  // Start turn timer if it's enabled and it's someone's turn
+  if (currentRoom.settings && currentRoom.settings.turnTimer > 0) {
+    startTurnTimer(currentRoom.settings.turnTimer);
+  }
 
   showNotification('Game started!', 'success');
-  console.log('[Uno Client] Game started');
+  console.log('[Uno Client] Game started', {
+    topCard: currentRoom.topCard,
+    currentColor: currentRoom.currentColor,
+    currentPlayer: currentRoom.currentPlayer,
+    myUserId: myUserId,
+    isMyTurn: isMyTurn
+  });
 }
 
 // ============================================================================
@@ -429,7 +445,14 @@ function handleCardClick(cardId) {
  * Check if card is playable
  */
 function isCardPlayable(card) {
-  if (!currentRoom || !currentRoom.topCard) return false;
+  if (!currentRoom || !currentRoom.topCard) {
+    if (!currentRoom) {
+      console.warn('[Uno Client] isCardPlayable: currentRoom is null');
+    } else if (!currentRoom.topCard) {
+      console.warn('[Uno Client] isCardPlayable: topCard is null', { currentRoom });
+    }
+    return false;
+  }
 
   const topCard = currentRoom.topCard;
   const currentColor = currentRoom.currentColor;
