@@ -622,44 +622,26 @@ function drawCard(socket, io, user) {
     reshuffleDeck(room);
   }
 
+  // Draw one card
+  const drawnCard = room.deck.pop();
+  room.hands[user.id].push(drawnCard);
+
+  // Check if the drawn card is playable
   const topCard = room.discardPile[room.discardPile.length - 1];
-  const drawnCards = [];
-  let foundPlayable = false;
-
-  // Draw until playable (if setting enabled)
-  if (room.settings.drawUntilPlayable) {
-    // Keep drawing until we find a playable card
-    while (!foundPlayable && room.deck.length > 0) {
-      if (room.deck.length === 0) {
-        reshuffleDeck(room);
-      }
-
-      const card = room.deck.pop();
-      room.hands[user.id].push(card);
-      drawnCards.push(card);
-
-      // Check if this card is playable
-      if (isCardPlayable(card, topCard, room.currentColor, room.drawStack)) {
-        foundPlayable = true;
-      }
-    }
-  } else {
-    // Standard rule: draw one card only
-    const card = room.deck.pop();
-    room.hands[user.id].push(card);
-    drawnCards.push(card);
-  }
+  const isPlayable = isCardPlayable(drawnCard, topCard, room.currentColor, room.drawStack);
 
   // Reset UNO flag if player now has more than 1 card
   if (room.hands[user.id].length > 1) {
     room.unoCalled[user.id] = false;
   }
 
-  // Send drawn cards to player (private)
+  // Send drawn card to player (private)
   socket.emit('game-event', {
     event: 'cards-drawn',
     data: {
-      cards: drawnCards
+      cards: [drawnCard],
+      isPlayable: isPlayable,
+      mustDrawMore: room.settings.drawUntilPlayable && !isPlayable
     }
   });
 
@@ -669,22 +651,42 @@ function drawCard(socket, io, user) {
     data: {
       userId: user.id,
       user: user,
-      cardCount: drawnCards.length,
+      cardCount: 1,
       handSize: room.hands[user.id].length,
       unoCalled: room.unoCalled[user.id]
     }
   });
 
-  // Clear turn timer
-  if (room.turnTimerActive) {
-    clearTimeout(room.turnTimerActive);
-    room.turnTimerActive = null;
+  // Only advance turn if:
+  // 1. Draw Until Playable is OFF (standard rules), OR
+  // 2. Draw Until Playable is ON and we drew a playable card
+  if (!room.settings.drawUntilPlayable || isPlayable) {
+    // Clear turn timer
+    if (room.turnTimerActive) {
+      clearTimeout(room.turnTimerActive);
+      room.turnTimerActive = null;
+    }
+
+    // If drawn card is playable, restart the timer for them to play it
+    if (isPlayable && room.settings.turnTimer > 0) {
+      startTurnTimer(io, room);
+    } else {
+      // Card not playable or no timer - advance turn
+      advanceTurn(io, room);
+    }
+  } else {
+    // Draw Until Playable is ON and card is NOT playable
+    // Keep the turn active, reset timer for next draw
+    if (room.turnTimerActive) {
+      clearTimeout(room.turnTimerActive);
+      room.turnTimerActive = null;
+    }
+    if (room.settings.turnTimer > 0) {
+      startTurnTimer(io, room);
+    }
   }
 
-  // Advance turn (player cannot play drawn card in standard rules)
-  advanceTurn(io, room);
-
-  console.log(`[Uno] ${user.nickname} drew ${drawnCards.length} card(s)`);
+  console.log(`[Uno] ${user.nickname} drew 1 card (playable: ${isPlayable})`);
 }
 
 // ============================================================================

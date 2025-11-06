@@ -576,6 +576,7 @@ function handleCardsDrawn(data) {
 
   renderPlayerHand();
   showNotification(`You drew ${data.cards.length} card(s)`, 'info');
+  }
 }
 
 // ============================================================================
