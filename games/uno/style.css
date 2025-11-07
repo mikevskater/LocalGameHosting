@@ -554,7 +554,9 @@ body::before {
     0 8px 16px rgba(0, 0, 0, 0.3),
     0 2px 4px rgba(0, 0, 0, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              filter 0.2s ease;
   user-select: none;
   cursor: pointer;
   transform-style: preserve-3d;
@@ -710,7 +712,6 @@ body::before {
 }
 
 .card.playable:hover {
-  transform: translateY(-25px) scale(1.1) rotate(-2deg);
   border-color: #ffc107;
   box-shadow:
     0 0 40px rgba(255, 235, 59, 1),
@@ -734,21 +735,19 @@ body::before {
    ANIMATIONS
    ============================================================================ */
 
-/* Card entrance animation */
+/* Card entrance animation - simple fade in for new cards only */
 @keyframes card-enter {
   from {
     opacity: 0;
-    scale: 0.8;
   }
   to {
     opacity: 1;
-    scale: 1;
   }
 }
 
 /* Only animate cards when they first appear, not on re-renders */
 .card.entering {
-  animation: card-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: card-enter 0.5s ease-out;
 }
 
 /* Card play animation (to be triggered via JS) */

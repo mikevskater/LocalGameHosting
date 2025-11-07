@@ -504,14 +504,14 @@ function handleCardPlayed(data) {
   if (data.user.id === myUserId) {
     const cardEl = document.querySelector(`[data-card-id="${data.card.id}"]`);
     if (cardEl) {
+      // Remove card from hand state immediately so it doesn't get re-rendered
+      myHand = myHand.filter(c => c.id !== data.card.id);
+      existingCardIds.delete(data.card.id);
+
       animateCardPlay(cardEl, data.card, () => {
         // Update room state after animation
         currentRoom.topCard = data.card;
         currentRoom.currentColor = data.currentColor;
-
-        // Remove card from hand
-        myHand = myHand.filter(c => c.id !== data.card.id);
-        existingCardIds.delete(data.card.id);
 
         renderGameBoard();
         renderOpponents();
@@ -719,8 +719,10 @@ function animateCardPlay(cardElement, card, callback) {
 
   document.body.appendChild(tempCard);
 
-  // Hide original card immediately
-  cardElement.style.opacity = '0';
+  // Hide and remove original card immediately
+  if (cardElement.parentNode) {
+    cardElement.remove();
+  }
 
   // Animate to discard pile after a brief delay
   setTimeout(() => {
@@ -1335,44 +1337,77 @@ function renderPlayerHand() {
   const container = document.getElementById('player-hand');
   const containerWidth = container.offsetWidth || 1000;
 
-  container.innerHTML = '';
+  // Get current cards in DOM
+  const currentElements = Array.from(container.children);
+  const currentCardIds = currentElements.map(el => el.dataset.cardId).filter(id => id);
 
   // Sort hand based on current mode
   const sortedHand = sortHand(myHand);
+  const handCardIds = sortedHand.map(c => c.id);
 
-  sortedHand.forEach((card, index) => {
-    const cardEl = createCardElement(card, true);
-    cardEl.dataset.cardId = card.id;
-    cardEl.dataset.cardIndex = index;
+  // Check if we need to re-render:
+  // 1. Different number of cards
+  // 2. Different card IDs (cards added/removed)
+  // 3. Different order (for sorting or repositioning)
+  const needsFullRender = currentCardIds.length !== handCardIds.length ||
+                          !currentCardIds.every((id, idx) => id === handCardIds[idx]);
 
-    // Calculate arc position
-    const pos = calculateArcPosition(index, sortedHand.length, containerWidth);
+  if (needsFullRender) {
+    // Full re-render needed
+    container.innerHTML = '';
 
-    // Apply positioning
-    cardEl.style.transform = `translateX(${pos.x}px) translateY(-${pos.y}px) rotate(${pos.rotation}deg)`;
-    cardEl.style.zIndex = pos.zIndex;
+    sortedHand.forEach((card, index) => {
+      const cardEl = createCardElement(card, true);
+      cardEl.dataset.cardId = card.id;
+      cardEl.dataset.cardIndex = index;
 
-    // Only add entering animation for NEW cards
-    const isNewCard = !existingCardIds.has(card.id);
-    if (isNewCard) {
-      cardEl.classList.add('entering');
-      existingCardIds.add(card.id);
-    }
+      // Calculate arc position
+      const pos = calculateArcPosition(index, sortedHand.length, containerWidth);
 
-    // Highlight playable cards or dim non-playable cards
-    if (currentRoom && currentRoom.currentPlayer === myUserId) {
-      if (isCardPlayable(card)) {
-        cardEl.classList.add('playable');
-      } else {
-        cardEl.classList.add('not-playable');
+      // Apply positioning
+      cardEl.style.transform = `translateX(${pos.x}px) translateY(-${pos.y}px) rotate(${pos.rotation}deg)`;
+      cardEl.style.zIndex = pos.zIndex;
+
+      // Only add entering animation for NEW cards (not in existingCardIds)
+      const isNewCard = !existingCardIds.has(card.id);
+      if (isNewCard) {
+        cardEl.classList.add('entering');
       }
-    }
 
-    // Add drag handlers
-    setupCardDrag(cardEl, card);
+      // Always ensure card is tracked in existingCardIds
+      existingCardIds.add(card.id);
 
-    container.appendChild(cardEl);
-  });
+      // Highlight playable cards or dim non-playable cards
+      if (currentRoom && currentRoom.currentPlayer === myUserId) {
+        if (isCardPlayable(card)) {
+          cardEl.classList.add('playable');
+        } else {
+          cardEl.classList.add('not-playable');
+        }
+      }
+
+      // Add click handler
+      setupCardDrag(cardEl, card);
+
+      container.appendChild(cardEl);
+    });
+  } else {
+    // Hand order is same, just update playable/not-playable classes
+    sortedHand.forEach((card, index) => {
+      const cardEl = container.querySelector(`[data-card-id="${card.id}"]`);
+      if (!cardEl) return;
+
+      // Update playable status
+      cardEl.classList.remove('playable', 'not-playable');
+      if (currentRoom && currentRoom.currentPlayer === myUserId) {
+        if (isCardPlayable(card)) {
+          cardEl.classList.add('playable');
+        } else {
+          cardEl.classList.add('not-playable');
+        }
+      }
+    });
+  }
 
   // Update UNO button
   const unoBtn = document.getElementById('uno-btn');
